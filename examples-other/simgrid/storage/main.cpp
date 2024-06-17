@@ -135,7 +135,7 @@ int main(int argc, char** argv) {
     auto* zone = sg4::create_full_zone("sample_zone");
     auto* host = zone->create_host("sample_host", 1e6);
 
-    auto disks_suit = MakeSimpleDisks(host, disks_count);
+    auto disks_suite = MakeSimpleDisks(host, disks_count);
 
     zone->seal();
 
@@ -150,6 +150,7 @@ int main(int argc, char** argv) {
                          std::tie(rhs.start_time, rhs.disk_idx, rhs.size);
               });
 
+    // Starter notifies Runner to submit requests in specified time moments
     sg4::Actor::create("starter", host, [&] {
         for (const auto& req : requests) {
             sg4::this_actor::sleep_until(req.start_time);
@@ -157,40 +158,43 @@ int main(int argc, char** argv) {
         }
     });
 
+    // Runner submits requests to disks and logs request completion
     sg4::Actor::create("runner", host, [&] {
         XBT_INFO("Starting disk benchmark");
 
-        std::vector<sg4::ActivityPtr> activities;
-        int* dummy = nullptr;
-        activities.push_back(mb->get_async<int>(&dummy));
-
-        size_t next_activity_to_start = 0;
-        std::vector<size_t> activities_to_requests;
-        activities_to_requests.push_back(0);  // dummy
-
+        size_t next_request_id = 0;
         std::vector<double> real_start_times;
         real_start_times.resize(requests_count);
 
-        for (size_t i = 0; i < 2 * requests_count; ++i) {
-            if (size_t finished_idx = sg4::Activity::wait_any(activities); finished_idx == 0) {
-                // Time to start next disk activity
-                auto& req = requests[next_activity_to_start];
+        sg4::ActivitySet activities;
+        int* dummy = nullptr;
+        activities.push(mb->get_async<int>(&dummy));
 
-                activities.emplace_back(disks_suit->ReadAsync(req.disk_idx, req.size));
-                activities_to_requests.push_back(next_activity_to_start);
-                real_start_times[next_activity_to_start] = sg4::Engine::get_clock();
+        for (size_t i = 0; i < 2 * requests_count; ++i) {
+            sg4::ActivityPtr completed = activities.wait_any();
+            const std::string& completed_name = completed->get_name();
+            if (completed_name == "unnamed") {
+                // Time to submit next request
+                auto& req = requests[next_request_id];
+
+                sg4::IoPtr io = disks_suite->ReadAsync(req.disk_idx, req.size);
+                io->set_name(std::to_string(next_request_id));
+                activities.push(io);
+                real_start_times[next_request_id] = sg4::Engine::get_clock();
 
                 XBT_INFO(
                     "Starting request #%lu: read from disk-%lu, size = %lu, expected start time = "
                     "%.3f",
-                    next_activity_to_start, req.disk_idx, req.size,
+                    next_request_id, req.disk_idx, req.size,
                     static_cast<double>(req.start_time));
-                ++next_activity_to_start;
+                ++next_request_id;
 
-                activities[0] = mb->get_async<int>(&dummy);
+                activities.push(mb->get_async<int>(&dummy));
             } else {
-                // Some disk activity completed
-                size_t request_id = activities_to_requests[finished_idx];
+                // Some request is completed
+                std::stringstream ss(completed_name);
+                size_t request_id;
+                ss >> request_id;
                 auto& req = requests[request_id];
 
                 double elapsed_time = sg4::Engine::get_clock() - real_start_times[request_id];
@@ -198,11 +202,6 @@ int main(int argc, char** argv) {
                     "Completed request #%lu: read from disk-%lu, size = %lu, elapsed simulation "
                     "time = %.3f",
                     request_id, req.disk_idx, req.size, elapsed_time);
-
-                std::swap(activities[finished_idx], activities.back());
-                std::swap(activities_to_requests[finished_idx], activities_to_requests.back());
-                activities.pop_back();
-                activities_to_requests.pop_back();
             }
         }
         XBT_INFO("Exit");
