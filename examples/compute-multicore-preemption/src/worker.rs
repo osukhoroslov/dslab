@@ -83,7 +83,7 @@ impl Worker {
     }
 
     pub fn on_continue_task(&self, id: u64) {
-        self.compute.borrow_mut().continue_computation(id);
+        self.compute.borrow_mut().resume_computation(id);
     }
 }
 
@@ -117,7 +117,7 @@ impl StaticEventHandler for Worker {
             ContinueTask { id } => {
                 self.on_continue_task(id);
             }
-            CompContinued { .. } => {
+            CompResumed { .. } => {
                 log_debug!(self.ctx, "Task is continued");
             }
         })

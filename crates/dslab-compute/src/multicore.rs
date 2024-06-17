@@ -306,14 +306,13 @@ impl Compute {
     /// Returns workload fraction done for a given computation
     pub fn fraction_done(&self, comp_id: EventId) -> Result<f64, &str> {
         if let Some(computation) = self.computations.get(&comp_id) {
-            let speedup = computation.req.cores_dependency.speedup(computation.cores);
-
-            let flops_computed = (self.ctx.time() - computation.start_time) * self.speed * speedup;
-
-            if computation.state == ComputationState::Running {
-                Ok((computation.flops_done + flops_computed) / computation.req.flops)
-            } else {
-                Ok(computation.flops_done / computation.req.flops)
+            match computation.state {
+                ComputationState::Running => {
+                    let speedup = computation.req.cores_dependency.speedup(computation.cores);
+                    let flops_computed = (self.ctx.time() - computation.start_time) * self.speed * speedup;
+                    Ok((computation.flops_done + flops_computed) / computation.req.flops)
+                }
+                ComputationState::Preempted => Ok(computation.flops_done / computation.req.flops),
             }
         } else {
             Err("Computation does not exist")
