@@ -7,10 +7,10 @@ import re
 import numpy as np
 
 
-DSLAB_BINARY_PATH = "target/release/storage-disk-benchmark"
+DSLAB_BINARY_PATH = "target/release-optimized/storage-disk-benchmark"
 DSLAB_ADDITIONAL_ARGS = None
 
-SIMGRID_BINARY_PATH = "examples-other/simgrid/build/relwithdebinfo/bin/storage"
+SIMGRID_BINARY_PATH = "examples-other/simgrid/build/release/bin/storage"
 SIMGRID_ADDITIONAL_ARGS = "--log=root.thres:info"
 
 
