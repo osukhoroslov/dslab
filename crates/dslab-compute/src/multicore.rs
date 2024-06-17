@@ -137,6 +137,22 @@ pub struct CompStarted {
     pub cores: u32,
 }
 
+/// Computation cancellation request.
+#[derive(Clone, Serialize)]
+pub struct CancelComp {
+    /// Id of the computation.
+    pub id: u64,
+}
+
+/// Computation is cancelled successfully.
+#[derive(Clone, Serialize)]
+pub struct CompCancelled {
+    /// Id of the computation.
+    pub id: u64,
+    /// Fraction of the flops computed.
+    pub fraction_done: f64,
+}
+
 /// Computation preemption request.
 #[derive(Clone, Serialize)]
 pub struct PreemptComp {
@@ -340,9 +356,30 @@ impl Compute {
         self.ctx.emit_self_now(request)
     }
 
+    /// Cancels computation which is currently running.
+    pub fn cancel_computation(&mut self, comp_id: u64) {
+        self.ctx.emit_self_now(PreemptComp { id: comp_id });
+        let computation = self.computations.remove(&comp_id).unwrap();
+        self.ctx.emit_now(
+            CompCancelled {
+                id: comp_id,
+                fraction_done: computation.flops_done / computation.req.flops,
+            },
+            computation.req.requester,
+        );
+    }
+
     /// Preempts computation which is currently running.
     pub fn preempt_computation(&mut self, comp_id: u64) {
         self.ctx.emit_self_now(PreemptComp { id: comp_id });
+        let computation = self.computations.get(&comp_id).unwrap();
+        self.ctx.emit_now(
+            CompPreempted {
+                id: comp_id,
+                fraction_done: computation.flops_done / computation.req.flops,
+            },
+            computation.req.requester,
+        );
     }
 
     /// Resumes computation which has been preempted.
@@ -419,37 +456,22 @@ impl EventHandler for Compute {
                 }
             }
             PreemptComp { id } => {
-                let running_computation = self
-                    .computations
-                    .get_mut(&id)
-                    .expect("Unexpected PreemptComp event in Compute");
+                let computation = self.computations.get_mut(&id).expect("Computation does not exist");
 
-                if running_computation.state != ComputationState::Running {
-                    panic!("Computation is already preempted");
+                if computation.state == ComputationState::Preempted {
+                    return;
                 }
-                running_computation.state = ComputationState::Preempted;
+                computation.state = ComputationState::Preempted;
 
-                self.ctx.cancel_event(running_computation.comp_finished_event_id);
+                self.ctx.cancel_event(computation.comp_finished_event_id);
 
-                self.memory_available += running_computation.req.memory;
-                self.cores_available += running_computation.cores;
+                self.memory_available += computation.req.memory;
+                self.cores_available += computation.cores;
 
-                let speedup = running_computation
-                    .req
-                    .cores_dependency
-                    .speedup(running_computation.cores);
+                let speedup = computation.req.cores_dependency.speedup(computation.cores);
+                let flops_computed = (self.ctx.time() - computation.start_time) * self.speed * speedup;
 
-                let flops_computed = (self.ctx.time() - running_computation.start_time) * self.speed * speedup;
-
-                running_computation.flops_done += flops_computed;
-
-                self.ctx.emit_now(
-                    CompPreempted {
-                        id,
-                        fraction_done: running_computation.flops_done / running_computation.req.flops,
-                    },
-                    running_computation.req.requester,
-                );
+                computation.flops_done += flops_computed;
             }
             ResumeComp { id } => {
                 let computation = self
