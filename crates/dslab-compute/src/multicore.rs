@@ -153,16 +153,16 @@ pub struct CompPreempted {
     pub fraction_done: f64,
 }
 
-/// Computation continuing request
+/// Computation resumption request
 #[derive(Clone, Serialize)]
-pub struct ContinueComp {
+pub struct ResumeComp {
     /// Id of the computation.
     pub id: u64,
 }
 
-/// Computation is successfully continued
+/// Computation is successfully resumed
 #[derive(Clone, Serialize)]
-pub struct CompContinued {
+pub struct CompResumed {
     /// Id of the computation.
     pub id: u64,
 }
@@ -346,9 +346,9 @@ impl Compute {
         self.ctx.emit_self_now(PreemptComp { id: comp_id });
     }
 
-    /// Continues computation which has been preempted
-    pub fn continue_computation(&mut self, comp_id: u64) {
-        self.ctx.emit_self_now(ContinueComp { id: comp_id });
+    /// Resumes computation which has been preempted
+    pub fn resume_computation(&mut self, comp_id: u64) {
+        self.ctx.emit_self_now(ResumeComp { id: comp_id });
     }
 
     /// Requests resource allocation with given parameters and returns allocation id.
@@ -452,11 +452,11 @@ impl EventHandler for Compute {
                     running_computation.req.requester,
                 );
             }
-            ContinueComp { id } => {
+            ResumeComp { id } => {
                 let computation = self
                     .computations
                     .get_mut(&id)
-                    .expect("Unexpected ContinueComp event in Compute");
+                    .expect("Unexpected ResumeComp event in Compute");
 
                 if computation.state != ComputationState::Preempted {
                     panic!("Computation is already running");
@@ -479,7 +479,7 @@ impl EventHandler for Compute {
                     let cores = self.cores_available.min(computation.req.max_cores);
                     self.memory_available -= computation.req.memory;
                     self.cores_available -= cores;
-                    self.ctx.emit_now(CompContinued { id }, computation.req.requester);
+                    self.ctx.emit_now(CompResumed { id }, computation.req.requester);
 
                     let speedup = computation.req.cores_dependency.speedup(cores);
 
