@@ -369,6 +369,45 @@ impl Compute {
         self.ctx.emit_self_now(PreemptComp { id: comp_id });
     }
 
+    fn stop_computation(&mut self, comp_id: u64, preempt: bool) {
+        if let Some(computation) = self.computations.get_mut(&comp_id) {
+            if computation.state == ComputationState::Running {
+                computation.state = ComputationState::Preempted;
+
+                self.ctx.cancel_event(computation.comp_finished_event_id);
+
+                self.memory_available += computation.req.memory;
+                self.cores_available += computation.cores;
+
+                let speedup = computation.req.cores_dependency.speedup(computation.cores);
+                let flops_computed = (self.ctx.time() - computation.start_time) * self.speed * speedup;
+
+                computation.flops_done += flops_computed;
+            } else if preempt {
+                panic!("Computation is already preempted");
+            }
+
+            if preempt {
+                self.ctx.emit_now(
+                    CompPreempted {
+                        id: comp_id,
+                        fraction_done: computation.flops_done / computation.req.flops,
+                    },
+                    computation.req.requester,
+                );
+            } else {
+                self.ctx.emit_now(
+                    CompCancelled {
+                        id: comp_id,
+                        fraction_done: computation.flops_done / computation.req.flops,
+                    },
+                    computation.req.requester,
+                );
+                self.computations.remove(&comp_id);
+            }
+        }
+    }
+
     /// Resumes computation which has been preempted.
     pub fn resume_computation(&mut self, comp_id: u64) {
         self.ctx.emit_self_now(ResumeComp { id: comp_id });
@@ -443,53 +482,10 @@ impl EventHandler for Compute {
                 }
             }
             CancelComp { id } => {
-                if let Some(mut computation) = self.computations.remove(&id) {
-                    if computation.state == ComputationState::Running {
-                        self.ctx.cancel_event(computation.comp_finished_event_id);
-
-                        self.memory_available += computation.req.memory;
-                        self.cores_available += computation.cores;
-
-                        let speedup = computation.req.cores_dependency.speedup(computation.cores);
-                        let flops_computed = (self.ctx.time() - computation.start_time) * self.speed * speedup;
-
-                        computation.flops_done += flops_computed;
-                    }
-
-                    self.ctx.emit_now(
-                        CompCancelled {
-                            id,
-                            fraction_done: computation.flops_done / computation.req.flops,
-                        },
-                        computation.req.requester,
-                    );
-                }
+                self.stop_computation(id, false);
             }
             PreemptComp { id } => {
-                if let Some(computation) = self.computations.get_mut(&id) {
-                    if computation.state != ComputationState::Running {
-                        panic!("Computation is already preempted");
-                    }
-                    computation.state = ComputationState::Preempted;
-
-                    self.ctx.cancel_event(computation.comp_finished_event_id);
-
-                    self.memory_available += computation.req.memory;
-                    self.cores_available += computation.cores;
-
-                    let speedup = computation.req.cores_dependency.speedup(computation.cores);
-                    let flops_computed = (self.ctx.time() - computation.start_time) * self.speed * speedup;
-
-                    computation.flops_done += flops_computed;
-
-                    self.ctx.emit_now(
-                        CompPreempted {
-                            id,
-                            fraction_done: computation.flops_done / computation.req.flops,
-                        },
-                        computation.req.requester,
-                    );
-                }
+                self.stop_computation(id, true);
             }
             ResumeComp { id } => {
                 let computation = self
