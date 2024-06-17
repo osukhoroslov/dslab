@@ -17,16 +17,6 @@ pub struct TaskRequest {
     pub cores_dependency: CoresDependency,
 }
 
-#[derive(Clone, Serialize, Debug)]
-pub struct PreemptTask {
-    pub id: u64,
-}
-
-#[derive(Clone, Serialize, Debug)]
-pub struct ContinueTask {
-    pub id: u64,
-}
-
 pub struct Worker {
     pub compute: Rc<RefCell<Compute>>,
     pub ctx: SimulationContext,
