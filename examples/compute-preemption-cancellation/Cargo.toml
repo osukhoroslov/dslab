@@ -11,7 +11,6 @@ dslab-network = { path = "../../crates/dslab-network" }
 dslab-storage = { path = "../../crates/dslab-storage" }
 clap = { version = "3.1.12", features = ["cargo", "derive"] }
 env_logger = "0.9.0"
-futures = "0.3"
 log = "0.4.14"
 rand = "0.8.4"
 rand_pcg = "0.3.1"
