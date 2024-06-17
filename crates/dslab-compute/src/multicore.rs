@@ -356,30 +356,14 @@ impl Compute {
         self.ctx.emit_self_now(request)
     }
 
-    /// Cancels computation which is currently running.
+    /// Cancels computation.
     pub fn cancel_computation(&mut self, comp_id: u64) {
-        self.ctx.emit_self_now(PreemptComp { id: comp_id });
-        let computation = self.computations.remove(&comp_id).unwrap();
-        self.ctx.emit_now(
-            CompCancelled {
-                id: comp_id,
-                fraction_done: computation.flops_done / computation.req.flops,
-            },
-            computation.req.requester,
-        );
+        self.ctx.emit_self_now(CancelComp { id: comp_id });
     }
 
     /// Preempts computation which is currently running.
     pub fn preempt_computation(&mut self, comp_id: u64) {
         self.ctx.emit_self_now(PreemptComp { id: comp_id });
-        let computation = self.computations.get(&comp_id).unwrap();
-        self.ctx.emit_now(
-            CompPreempted {
-                id: comp_id,
-                fraction_done: computation.flops_done / computation.req.flops,
-            },
-            computation.req.requester,
-        );
     }
 
     /// Resumes computation which has been preempted.
@@ -455,6 +439,29 @@ impl EventHandler for Compute {
                     );
                 }
             }
+            CancelComp { id } => {
+                let mut computation = self.computations.remove(&id).expect("Computation does not exist");
+
+                if computation.state == ComputationState::Running {
+                    self.ctx.cancel_event(computation.comp_finished_event_id);
+
+                    self.memory_available += computation.req.memory;
+                    self.cores_available += computation.cores;
+
+                    let speedup = computation.req.cores_dependency.speedup(computation.cores);
+                    let flops_computed = (self.ctx.time() - computation.start_time) * self.speed * speedup;
+
+                    computation.flops_done += flops_computed;
+                }
+
+                self.ctx.emit_now(
+                    CompCancelled {
+                        id,
+                        fraction_done: computation.flops_done / computation.req.flops,
+                    },
+                    computation.req.requester,
+                );
+            }
             PreemptComp { id } => {
                 let computation = self.computations.get_mut(&id).expect("Computation does not exist");
 
@@ -472,6 +479,14 @@ impl EventHandler for Compute {
                 let flops_computed = (self.ctx.time() - computation.start_time) * self.speed * speedup;
 
                 computation.flops_done += flops_computed;
+
+                self.ctx.emit_now(
+                    CompPreempted {
+                        id,
+                        fraction_done: computation.flops_done / computation.req.flops,
+                    },
+                    computation.req.requester,
+                );
             }
             ResumeComp { id } => {
                 let computation = self
