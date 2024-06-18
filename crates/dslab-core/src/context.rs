@@ -940,12 +940,11 @@ impl SimulationContext {
         /// ```
         pub async fn yield_now(&self) {
             let current_time = self.time();
-            let mut need_yield = false;
-            if let Some(next_event) = self.sim_state.borrow_mut().peek_event() {
-                if next_event.time == current_time {
-                    need_yield = true;
-                }
-            }
+            let need_yield = if let Some(next_event) = self.sim_state.borrow_mut().peek_event() {
+                next_event.time == current_time
+            } else {
+                false
+            };
             if need_yield {
                 self.sleep(0.).await;
             }
