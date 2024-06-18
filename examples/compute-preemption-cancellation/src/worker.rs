@@ -111,6 +111,9 @@ impl StaticEventHandler for Worker {
             CompResumed { id } => {
                 log_debug!(self.ctx, "Task {} is resumed", id);
             }
+            CompFailed { id, reason } => {
+                log_debug!(self.ctx, "Task {} is failed: {:?}", id, reason);
+            }
         })
     }
 }
