@@ -939,7 +939,16 @@ impl SimulationContext {
         /// assert_eq!(sim.time(), 10.);
         /// ```
         pub async fn yield_now(&self) {
-            self.sleep(0.).await;
+            let current_time = self.time();
+            let mut need_yield = false;
+            if let Some(next_event) = self.sim_state.borrow_mut().peek_event() {
+                if next_event.time == current_time {
+                    need_yield = true;
+                }
+            }
+            if need_yield {
+                self.sleep(0.).await;
+            }
         }
 
         /// Waits (asynchronously) for event of type `T` from any component.
