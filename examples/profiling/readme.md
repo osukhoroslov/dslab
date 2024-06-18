@@ -80,4 +80,4 @@ cargo run --release -- --events-count 50000000 --rand-clients-choose
 cargo run --profile release-optimized -- --events-count 50000000 --rand-clients-choose
 ```
 
-You can find more general tips about improving performance of Rust programs in the [`Rust Performance Book`](https://nnethercote.github.io/perf-book/) 
+You can find more general tips about improving performance of Rust programs in the [`Rust Performance Book`](https://nnethercote.github.io/perf-book/). For example, we found that using [`jemalloc`](https://nnethercote.github.io/perf-book/build-configuration.html#jemalloc) instead of the default allocator improves the execution times, especially when using `async_mode` feature of `dslab-core`.
