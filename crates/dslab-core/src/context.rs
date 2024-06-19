@@ -878,12 +878,14 @@ impl SimulationContext {
                 .create_timer(self.id, duration, self.sim_state.clone())
         }
 
-        /// Waits (asynchronously) until all events scheduled for the current time are processed.
-        /// May be useful to execute logic without a time delay but after all other components have processed their events.
-        /// In case there are several `yield_now` calls in the same simulation time, the order of completion is the same as
-        /// the order of calls.
+        /// Waits (asynchronously) until all events scheduled at the current time are processed.
+        /// 
+        /// May be useful to execute some logic without a time delay but after all events have been processed.
+        /// If there are several `yield_now` calls at the same simulation time, the order of their completion 
+        /// is the same as the order of the calls.
         ///
         /// # Examples
+        ///
         /// ```rust
         /// use std::cell::RefCell;
         /// use serde::Serialize;

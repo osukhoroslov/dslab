@@ -17,9 +17,9 @@ use crate::SimulationContext;
 /// The items are guarantied to be delivered to consumers in the order of [`take`](UnboundedQueue::take) calls.
 pub struct UnboundedQueue<T> {
     items: RefCell<VecDeque<T>>,
-    dropped_tickets: Rc<RefCell<FxHashSet<TicketID>>>,
     send_ticket: Ticket,
     receive_ticket: Ticket,
+    dropped_tickets: Rc<RefCell<FxHashSet<TicketID>>>,
     ctx: SimulationContext,
 }
 
@@ -28,9 +28,9 @@ impl<T> UnboundedQueue<T> {
         ctx.register_key_getter_for::<ConsumerNotify>(|notify| notify.ticket_id);
         Self {
             items: RefCell::new(VecDeque::new()),
-            dropped_tickets: Rc::new(RefCell::new(FxHashSet::default())),
             send_ticket: Ticket::new(),
             receive_ticket: Ticket::new(),
+            dropped_tickets: Rc::new(RefCell::new(FxHashSet::default())),            
             ctx,
         }
     }
@@ -104,9 +104,9 @@ impl Ticket {
 }
 
 struct ElementFutureWrapper<'a, T> {
-    dropped_tickets: Rc<RefCell<FxHashSet<TicketID>>>,
     element_future: Pin<Box<dyn Future<Output = T> + 'a>>,
     ticket_id: TicketID,
+    dropped_tickets: Rc<RefCell<FxHashSet<TicketID>>>,    
     completed: bool,
 }
 
@@ -117,9 +117,9 @@ impl<'a, T> ElementFutureWrapper<'a, T> {
         dropped_tickets: Rc<RefCell<FxHashSet<TicketID>>>,
     ) -> Self {
         Self {
-            dropped_tickets,
             element_future: Box::pin(element_future),
             ticket_id,
+            dropped_tickets,            
             completed: false,
         }
     }

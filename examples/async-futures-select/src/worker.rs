@@ -55,8 +55,10 @@ impl Worker {
                 }
             };
 
-            // Check that all TaskRequest and CompFinished at the current time are processed.
-            if try_dispatch && self.ctx.yield_now().now_or_never().is_some() {
+            // Check that all events at the current time are received.
+            // Otherwise, we can miss a CompFinished event during task dispatching.
+            let all_received = self.ctx.yield_now().now_or_never().is_some();
+            if try_dispatch && all_received {
                 for _ in 0..pending_tasks.len() {
                     let task = pending_tasks.front().unwrap();
                     match self.try_dispatch_task(task).await {
