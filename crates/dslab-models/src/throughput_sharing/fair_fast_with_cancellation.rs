@@ -1,8 +1,9 @@
 //! Fast implementation of fair throughput sharing model.
 
 use std::cmp::Ordering;
-use std::collections::{BinaryHeap, HashMap};
+use std::collections::BinaryHeap;
 
+use rustc_hash::FxHashMap;
 use sugars::boxed;
 
 use dslab_core::SimulationContext;
@@ -68,7 +69,7 @@ impl Eq for ActivityInfo {}
 /// Fast implementation of fair throughput sharing model with ability to cancel activities.
 pub struct FairThroughputSharingModelWithCancellation<T> {
     activities_queue: BinaryHeap<ActivityInfo>,
-    running_activities: HashMap<ActivityId, Activity<T>>,
+    running_activities: FxHashMap<ActivityId, Activity<T>>,
     throughput_function: ResourceThroughputFn,
     factor_function: Box<dyn ActivityFactorFn<T>>,
     throughput_per_activity: f64,
@@ -82,7 +83,7 @@ impl<T> FairThroughputSharingModelWithCancellation<T> {
     pub fn new(throughput_function: ResourceThroughputFn, factor_function: Box<dyn ActivityFactorFn<T>>) -> Self {
         Self {
             activities_queue: BinaryHeap::new(),
-            running_activities: HashMap::new(),
+            running_activities: FxHashMap::default(),
             throughput_function,
             factor_function,
             throughput_per_activity: 0.,
@@ -101,7 +102,7 @@ impl<T> FairThroughputSharingModelWithCancellation<T> {
     pub fn with_dynamic_throughput(throughput_function: ResourceThroughputFn) -> Self {
         Self {
             activities_queue: BinaryHeap::new(),
-            running_activities: HashMap::new(),
+            running_activities: FxHashMap::default(),
             throughput_function,
             factor_function: boxed!(ConstantFactorFn::new(1.)),
             throughput_per_activity: 0.,
