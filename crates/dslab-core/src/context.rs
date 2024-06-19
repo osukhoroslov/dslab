@@ -879,9 +879,9 @@ impl SimulationContext {
         }
 
         /// Waits (asynchronously) until all events scheduled at the current time are processed.
-        /// 
+        ///
         /// May be useful to execute some logic without a time delay but after all events have been processed.
-        /// If there are several `yield_now` calls at the same simulation time, the order of their completion 
+        /// If there are several `yield_now` calls at the same simulation time, the order of their completion
         /// is the same as the order of the calls.
         ///
         /// # Examples
