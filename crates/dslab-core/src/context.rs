@@ -878,6 +878,80 @@ impl SimulationContext {
                 .create_timer(self.id, duration, self.sim_state.clone())
         }
 
+        /// Waits (asynchronously) until all events scheduled at the current time are processed.
+        ///
+        /// May be useful to execute some logic without a time delay but after all events have been processed.
+        /// If there are several `yield_now` calls at the same simulation time, the order of their completion
+        /// is the same as the order of the calls.
+        ///
+        /// # Examples
+        ///
+        /// ```rust
+        /// use std::cell::RefCell;
+        /// use serde::Serialize;
+        /// use dslab_core::Simulation;
+        ///
+        /// #[derive(Clone, Serialize)]
+        /// struct Request {}
+        ///
+        /// #[derive(Clone, Serialize)]
+        /// struct Response {}
+        ///
+        /// let mut sim = Simulation::new(123);
+        ///
+        /// let master = sim.create_context("master");
+        /// let worker_1 = sim.create_context("worker_1");
+        /// let worker_2 = sim.create_context("worker_2");
+        ///
+        /// sim.spawn(async move {
+        ///     let mut counter = RefCell::new(0);
+        ///     futures::join!(
+        ///         async {
+        ///             master.emit(Request {}, worker_1.id(), 5.);
+        ///             master.recv_event::<Response>().await;
+        ///
+        ///             // Wait until workers exchange 3 messages.
+        ///             master.yield_now().await;
+        ///
+        ///             assert_eq!(*counter.borrow(), 3);
+        ///             assert_eq!(master.time(), 5.);
+        ///             master.sleep(5.).await;
+        ///         },
+        ///         async {
+        ///             worker_1.recv_event::<Request>().await;
+        ///             worker_1.emit_now(Response {}, master.id());
+        ///             for _ in 0..3 {
+        ///                 worker_1.emit_now(Request {}, worker_2.id());
+        ///             }
+        ///             for _ in 0..3 {
+        ///                 worker_1.recv_event::<Response>().await;
+        ///                 *counter.borrow_mut() += 1;
+        ///             }
+        ///         },
+        ///         async {
+        ///             loop {
+        ///                 let request = worker_2.recv_event::<Request>().await;
+        ///                 worker_2.emit_now(Response {}, request.src);
+        ///             }
+        ///         }
+        ///     );
+        /// });
+        ///
+        /// sim.step_until_no_events();
+        /// assert_eq!(sim.time(), 10.);
+        /// ```
+        pub async fn yield_now(&self) {
+            let current_time = self.time();
+            let need_yield = if let Some(next_event) = self.sim_state.borrow_mut().peek_event() {
+                next_event.time == current_time
+            } else {
+                false
+            };
+            if need_yield {
+                self.sleep(0.).await;
+            }
+        }
+
         /// Waits (asynchronously) for event of type `T` from any component.
         ///
         /// The returned future outputs the received event and event data.
