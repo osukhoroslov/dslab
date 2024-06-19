@@ -1469,10 +1469,10 @@
 
             <span class="kw">let </span>next_timer_time = <span class="self">self</span>.sim_state.borrow_mut().peek_timer().unwrap().time;
             <span class="kw">let </span>next_event_time = <span class="self">self</span>.sim_state.borrow_mut().peek_event().unwrap().time;
-            <span class="kw">if </span>next_timer_time &lt;= next_event_time {
-                <span class="self">self</span>.process_timer();
-            } <span class="kw">else </span>{
+            <span class="kw">if </span>next_event_time &lt;= next_timer_time {
                 <span class="self">self</span>.process_event();
+            } <span class="kw">else </span>{
+                <span class="self">self</span>.process_timer();
             }
 
             <span class="bool-val">true
