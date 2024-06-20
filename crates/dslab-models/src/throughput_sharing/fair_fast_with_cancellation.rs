@@ -15,19 +15,12 @@ const TOTAL_WORK_MAX_VALUE: f64 = 1e12;
 
 struct Activity<T> {
     start_work: f64,
-    finish_work: f64,
-    volume: f64,
     item: T,
 }
 
 impl<T> Activity<T> {
-    fn new(start_work: f64, finish_work: f64, volume: f64, item: T) -> Self {
-        Self {
-            start_work,
-            finish_work,
-            volume,
-            item,
-        }
+    fn new(start_work: f64, item: T) -> Self {
+        Self { start_work, item }
     }
 }
 
@@ -124,7 +117,6 @@ impl<T> FairThroughputSharingModelWithCancellation<T> {
             self.activities_queue = entries_vec.into();
             self.running_activities.iter_mut().for_each(|(_id, a)| {
                 a.start_work -= self.total_work;
-                a.finish_work -= self.total_work;
             });
             self.total_work = 0.;
         }
@@ -151,46 +143,41 @@ impl<T> ThroughputSharingModel<T> for FairThroughputSharingModelWithCancellation
         let activity_info = ActivityInfo::new(next_id, finish_work);
         self.activities_queue.push(activity_info);
         self.running_activities
-            .insert(next_id, Activity::<T>::new(self.total_work, finish_work, volume, item));
+            .insert(next_id, Activity::<T>::new(self.total_work, item));
         self.next_id += 1;
         self.recalculate_throughput();
         self.last_update = ctx.time();
         next_id
     }
 
-    fn cancel(&mut self, id: ActivityId, ctx: &SimulationContext) -> Option<(f64, T)> {
-        if !self.activities_queue.is_empty() {
-            self.increment_total_work((ctx.time() - self.last_update) * self.throughput_per_activity);
+    fn pop(&mut self) -> Option<(f64, T)> {
+        while let Some(entry) = self.activities_queue.pop() {
+            if let Some(activity) = self.running_activities.remove(&entry.id) {
+                let remaining_work = entry.finish_work - self.total_work;
+                let finish_time = self.last_update + remaining_work / self.throughput_per_activity;
+                self.increment_total_work(remaining_work);
+                self.recalculate_throughput();
+                self.last_update = finish_time;
+                return Some((finish_time, activity.item));
+            }
         }
+        None
+    }
 
-        let result = if let Some(activity) = self.running_activities.remove(&id) {
-            let volume_done = activity.volume * (self.total_work - activity.start_work)
-                / (activity.finish_work - activity.start_work);
+    fn cancel(&mut self, id: ActivityId, ctx: &SimulationContext) -> Option<(f64, T)> {
+        if let Some(activity) = self.running_activities.remove(&id) {
+            if !self.activities_queue.is_empty() {
+                self.increment_total_work((ctx.time() - self.last_update) * self.throughput_per_activity);
+            }
+
+            self.recalculate_throughput();
+            self.last_update = ctx.time();
+
+            let volume_done = self.total_work - activity.start_work;
             Some((volume_done, activity.item))
         } else {
             None
-        };
-
-        self.recalculate_throughput();
-        self.last_update = ctx.time();
-
-        result
-    }
-
-    fn pop(&mut self) -> Option<(f64, T)> {
-        while let Some(entry) = self.activities_queue.pop() {
-            if !self.running_activities.contains_key(&entry.id) {
-                continue;
-            }
-            let activity = self.running_activities.remove(&entry.id).unwrap();
-            let remaining_work = entry.finish_work - self.total_work;
-            let finish_time = self.last_update + remaining_work / self.throughput_per_activity;
-            self.increment_total_work(remaining_work);
-            self.recalculate_throughput();
-            self.last_update = finish_time;
-            return Some((finish_time, activity.item));
         }
-        None
     }
 
     fn peek(&mut self) -> Option<(f64, &T)> {

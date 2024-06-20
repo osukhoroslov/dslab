@@ -281,7 +281,7 @@ fn simple_cancellation() {
 }
 
 #[test]
-fn try_pop_cancelled() {
+fn check_cancel_recalculation() {
     let mut sim = Simulation::new(123);
     let ctx = sim.create_context("test");
     let mut model: FairThroughputSharingModelWithCancellation<u32> =
@@ -316,4 +316,25 @@ fn try_pop_cancelled() {
     assert_eq!(model.pop(), Some((17.25, 4)));
     assert_eq!(model.pop(), Some((17.25, 5)));
     assert_eq!(model.pop(), Some((17.25, 6)));
+}
+
+#[test]
+fn invalid_cancellation() {
+    let mut sim = Simulation::new(123);
+    let ctx = sim.create_context("test");
+    let mut model: FairThroughputSharingModelWithCancellation<u32> =
+        FairThroughputSharingModelWithCancellation::with_fixed_throughput(100.);
+
+    model.insert(0, 200., &ctx);
+    let id1 = model.insert(1, 200., &ctx);
+    sim.step_until_time(1.);
+
+    let (volume, item) = model.cancel(id1, &ctx).unwrap();
+    assert_eq!(volume, 50.);
+    assert_eq!(item, 1);
+
+    assert_eq!(model.cancel(id1, &ctx), None);
+    assert_eq!(model.cancel(1000, &ctx), None);
+
+    assert_eq!(model.pop(), Some((2.5, 0)));
 }
