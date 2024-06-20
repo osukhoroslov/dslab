@@ -8,7 +8,9 @@ use dslab_core::context::SimulationContext;
 use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
 
-use dslab_models::throughput_sharing::{FairThroughputSharingModel, ThroughputSharingModel};
+use dslab_models::throughput_sharing::{
+    FairThroughputSharingModel, FairThroughputSharingModelWithCancellation, ThroughputSharingModel,
+};
 
 // STRUCTS -------------------------------------------------------------------------------------------------------------
 
@@ -91,6 +93,7 @@ pub struct Compute {
     #[allow(dead_code)]
     memory_total: u64,
     memory_available: u64,
+    // throughput_model: FairThroughputSharingModelWithCancellation<RunningComputation>,
     throughput_model: FairThroughputSharingModel<RunningComputation>,
     next_event: u64,
     ctx: SimulationContext,
@@ -103,6 +106,7 @@ impl Compute {
             speed,
             memory_total: memory,
             memory_available: memory,
+            // throughput_model: FairThroughputSharingModelWithCancellation::with_fixed_throughput(speed),
             throughput_model: FairThroughputSharingModel::with_fixed_throughput(speed),
             next_event: 0,
             ctx,
