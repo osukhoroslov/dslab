@@ -1,4 +1,4 @@
-//! Fast implementation of fair throughput sharing model.
+//! Fast implementation of fair throughput sharing model with ability to cancel activities.
 
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
