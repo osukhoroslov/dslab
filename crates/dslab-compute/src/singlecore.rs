@@ -8,9 +8,7 @@ use dslab_core::context::SimulationContext;
 use dslab_core::event::Event;
 use dslab_core::handler::EventHandler;
 
-use dslab_models::throughput_sharing::{
-    FairThroughputSharingModel, FairThroughputSharingModelWithCancellation, ThroughputSharingModel,
-};
+use dslab_models::throughput_sharing::{FairThroughputSharingModel, ThroughputSharingModel};
 
 // STRUCTS -------------------------------------------------------------------------------------------------------------
 

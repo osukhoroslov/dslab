@@ -1158,19 +1158,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fair-share-bench"
-version = "0.1.0"
-dependencies = [
- "clap 3.2.25",
- "dslab-compute",
- "dslab-core",
- "env_logger 0.9.3",
- "log 0.4.20",
- "serde",
- "sugars",
-]
-
-[[package]]
 name = "fastrand"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
