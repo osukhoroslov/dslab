@@ -271,10 +271,10 @@ fn simple_cancellation() {
         FairThroughputSharingModelWithCancellation::with_fixed_throughput(100.);
 
     model.insert(0, 200., &ctx);
-    let id1 = model.insert(1, 200., &ctx);
+    let id2 = model.insert(1, 200., &ctx);
     sim.step_until_time(1.);
 
-    let (volume, item) = model.cancel(id1, &ctx).unwrap();
+    let (volume, item) = model.cancel(id2, &ctx).unwrap();
     assert_eq!(volume, 50.);
     assert_eq!(item, 1);
     assert_eq!(model.pop(), Some((2.5, 0)));
@@ -326,14 +326,14 @@ fn invalid_cancellation() {
         FairThroughputSharingModelWithCancellation::with_fixed_throughput(100.);
 
     model.insert(0, 200., &ctx);
-    let id1 = model.insert(1, 200., &ctx);
+    let id2 = model.insert(1, 200., &ctx);
     sim.step_until_time(1.);
 
-    let (volume, item) = model.cancel(id1, &ctx).unwrap();
+    let (volume, item) = model.cancel(id2, &ctx).unwrap();
     assert_eq!(volume, 50.);
     assert_eq!(item, 1);
 
-    assert_eq!(model.cancel(id1, &ctx), None);
+    assert_eq!(model.cancel(id2, &ctx), None);
     assert_eq!(model.cancel(1000, &ctx), None);
 
     assert_eq!(model.pop(), Some((2.5, 0)));
