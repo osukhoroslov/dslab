@@ -60,7 +60,10 @@ impl PartialEq for ActivityInfo {
 impl Eq for ActivityInfo {}
 
 /// Fast implementation of fair throughput sharing model with ability to cancel activities.
-pub struct FairThroughputSharingModelWithCancellation<T> {
+///
+/// According to our tests, it is slightly (10-20%) slower than
+/// [`FairThroughputSharingModel`](crate::throughput_sharing::FairThroughputSharingModel).
+pub struct FairThroughputSharingModelWithCancel<T> {
     activities_queue: BinaryHeap<ActivityInfo>,
     running_activities: FxHashMap<ActivityId, Activity<T>>,
     throughput_function: ResourceThroughputFn,
@@ -71,7 +74,7 @@ pub struct FairThroughputSharingModelWithCancellation<T> {
     last_update: f64,
 }
 
-impl<T> FairThroughputSharingModelWithCancellation<T> {
+impl<T> FairThroughputSharingModelWithCancel<T> {
     /// Creates model with given throughput and factor functions.
     pub fn new(throughput_function: ResourceThroughputFn, factor_function: Box<dyn ActivityFactorFn<T>>) -> Self {
         Self {
@@ -132,7 +135,7 @@ impl<T> FairThroughputSharingModelWithCancellation<T> {
     }
 }
 
-impl<T> ThroughputSharingModel<T> for FairThroughputSharingModelWithCancellation<T> {
+impl<T> ThroughputSharingModel<T> for FairThroughputSharingModelWithCancel<T> {
     fn insert(&mut self, item: T, volume: f64, ctx: &SimulationContext) -> ActivityId {
         if !self.activities_queue.is_empty() {
             self.increment_total_work((ctx.time() - self.last_update) * self.throughput_per_activity);

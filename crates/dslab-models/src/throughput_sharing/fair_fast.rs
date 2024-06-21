@@ -49,6 +49,9 @@ impl<T> PartialEq for Activity<T> {
 impl<T> Eq for Activity<T> {}
 
 /// Fast implementation of fair throughput sharing model.
+///
+/// Note that it does not support activity cancellation, if you need it see
+/// [`FairThroughputSharingModelWithCancel`](crate::throughput_sharing::FairThroughputSharingModelWithCancel).
 pub struct FairThroughputSharingModel<T> {
     activities: BinaryHeap<Activity<T>>,
     throughput_function: ResourceThroughputFn,

@@ -6,7 +6,7 @@ use super::fair_fast::FairThroughputSharingModel;
 use super::fair_slow::SlowFairThroughputSharingModel;
 use super::functions::make_constant_throughput_fn;
 use super::model::{ActivityFactorFn, ThroughputSharingModel};
-use super::FairThroughputSharingModelWithCancellation;
+use super::FairThroughputSharingModelWithCancel;
 
 fn assert_float_eq(x: f64, y: f64, eps: f64) {
     assert!(
@@ -19,7 +19,7 @@ fn assert_float_eq(x: f64, y: f64, eps: f64) {
 
 struct ModelsTester {
     fast_model: FairThroughputSharingModel<u32>,
-    fast_model_with_cancellation: FairThroughputSharingModelWithCancellation<u32>,
+    fast_model_with_cancel: FairThroughputSharingModelWithCancel<u32>,
     slow_model: SlowFairThroughputSharingModel<u32>,
     sim: Simulation,
     ctx: SimulationContext,
@@ -31,7 +31,7 @@ impl ModelsTester {
         let ctx = sim.create_context("test");
         Self {
             fast_model: FairThroughputSharingModel::with_fixed_throughput(bandwidth),
-            fast_model_with_cancellation: FairThroughputSharingModelWithCancellation::with_fixed_throughput(bandwidth),
+            fast_model_with_cancel: FairThroughputSharingModelWithCancel::with_fixed_throughput(bandwidth),
             slow_model: SlowFairThroughputSharingModel::with_fixed_throughput(bandwidth),
             sim,
             ctx,
@@ -43,7 +43,7 @@ impl ModelsTester {
         let ctx = sim.create_context("test");
         Self {
             fast_model: FairThroughputSharingModel::with_dynamic_throughput(boxed!(throughput_function)),
-            fast_model_with_cancellation: FairThroughputSharingModelWithCancellation::with_dynamic_throughput(boxed!(
+            fast_model_with_cancel: FairThroughputSharingModelWithCancel::with_dynamic_throughput(boxed!(
                 throughput_function
             )),
             slow_model: SlowFairThroughputSharingModel::with_dynamic_throughput(boxed!(throughput_function)),
@@ -59,16 +59,16 @@ impl ModelsTester {
     fn insert_and_compare(&mut self, item: u32, volume: f64) {
         self.fast_model.insert(item, volume, &mut self.ctx);
         self.slow_model.insert(item, volume, &mut self.ctx);
-        self.fast_model_with_cancellation.insert(item, volume, &mut self.ctx);
+        self.fast_model_with_cancel.insert(item, volume, &mut self.ctx);
 
         let fast_item = self.fast_model.peek().unwrap();
         let slow_item = self.slow_model.peek().unwrap();
-        let fast_item_with_cancellation = self.fast_model_with_cancellation.peek().unwrap();
+        let fast_item_with_cancel = self.fast_model_with_cancel.peek().unwrap();
 
         assert_float_eq(fast_item.0, slow_item.0, 1e-12);
-        assert_float_eq(fast_item_with_cancellation.0, slow_item.0, 1e-12);
+        assert_float_eq(fast_item_with_cancel.0, slow_item.0, 1e-12);
         assert_eq!(fast_item.1, slow_item.1);
-        assert_eq!(fast_item_with_cancellation.1, slow_item.1)
+        assert_eq!(fast_item_with_cancel.1, slow_item.1)
     }
 
     fn pop_all_and_compare(&mut self) -> Vec<(f64, u32)> {
@@ -80,20 +80,20 @@ impl ModelsTester {
         while let Some((time, item)) = self.slow_model.pop() {
             slow_model_result.push((time, item));
         }
-        let mut fast_model_with_cancellation_result = vec![];
-        while let Some((time, item)) = self.fast_model_with_cancellation.pop() {
-            fast_model_with_cancellation_result.push((time, item));
+        let mut fast_model_with_cancel_result = vec![];
+        while let Some((time, item)) = self.fast_model_with_cancel.pop() {
+            fast_model_with_cancel_result.push((time, item));
         }
         println!();
         for i in 0..fast_model_result.len() {
             assert_float_eq(fast_model_result[i].0, slow_model_result[i].0, 1e-12);
-            assert_float_eq(fast_model_with_cancellation_result[i].0, slow_model_result[i].0, 1e-12);
+            assert_float_eq(fast_model_with_cancel_result[i].0, slow_model_result[i].0, 1e-12);
             println!(
                 "{} {} {}",
-                fast_model_with_cancellation_result[i].0, fast_model_result[i].0, slow_model_result[i].0
+                fast_model_with_cancel_result[i].0, fast_model_result[i].0, slow_model_result[i].0
             );
             assert_eq!(fast_model_result[i].1, slow_model_result[i].1);
-            assert_eq!(fast_model_with_cancellation_result[i].1, slow_model_result[i].1);
+            assert_eq!(fast_model_with_cancel_result[i].1, slow_model_result[i].1);
         }
         fast_model_result
     }
@@ -267,8 +267,8 @@ fn throughput_factor_and_degradation() {
 fn simple_cancellation() {
     let mut sim = Simulation::new(123);
     let ctx = sim.create_context("test");
-    let mut model: FairThroughputSharingModelWithCancellation<u32> =
-        FairThroughputSharingModelWithCancellation::with_fixed_throughput(100.);
+    let mut model: FairThroughputSharingModelWithCancel<u32> =
+        FairThroughputSharingModelWithCancel::with_fixed_throughput(100.);
 
     model.insert(0, 200., &ctx);
     let id2 = model.insert(1, 200., &ctx);
@@ -284,8 +284,8 @@ fn simple_cancellation() {
 fn check_cancel_recalculation() {
     let mut sim = Simulation::new(123);
     let ctx = sim.create_context("test");
-    let mut model: FairThroughputSharingModelWithCancellation<u32> =
-        FairThroughputSharingModelWithCancellation::with_fixed_throughput(100.);
+    let mut model: FairThroughputSharingModelWithCancel<u32> =
+        FairThroughputSharingModelWithCancel::with_fixed_throughput(100.);
 
     let first_id = model.insert(0, 225., &ctx);
     let ids = [
@@ -322,8 +322,8 @@ fn check_cancel_recalculation() {
 fn invalid_cancellation() {
     let mut sim = Simulation::new(123);
     let ctx = sim.create_context("test");
-    let mut model: FairThroughputSharingModelWithCancellation<u32> =
-        FairThroughputSharingModelWithCancellation::with_fixed_throughput(100.);
+    let mut model: FairThroughputSharingModelWithCancel<u32> =
+        FairThroughputSharingModelWithCancel::with_fixed_throughput(100.);
 
     model.insert(0, 200., &ctx);
     let id2 = model.insert(1, 200., &ctx);
