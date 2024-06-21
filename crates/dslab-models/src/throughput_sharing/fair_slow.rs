@@ -9,11 +9,11 @@ use sugars::boxed;
 use dslab_core::SimulationContext;
 
 use super::functions::{make_constant_throughput_fn, ConstantFactorFn};
-use super::model::{ActivityFactorFn, ResourceThroughputFn, ThroughputSharingModel};
+use super::model::{ActivityFactorFn, ActivityId, ResourceThroughputFn, ThroughputSharingModel};
 
 struct Activity<T> {
     remaining_volume: f64,
-    id: u64,
+    id: ActivityId,
     item: T,
 }
 
@@ -105,12 +105,14 @@ impl<T> SlowFairThroughputSharingModel<T> {
 }
 
 impl<T> ThroughputSharingModel<T> for SlowFairThroughputSharingModel<T> {
-    fn insert(&mut self, item: T, volume: f64, ctx: &mut SimulationContext) {
+    fn insert(&mut self, item: T, volume: f64, ctx: &SimulationContext) -> ActivityId {
         let new_count = self.entries.len() + 1;
         self.recalculate(ctx.time(), (self.throughput_function)(new_count) / new_count as f64);
         let volume = volume / self.factor_function.get_factor(&item, ctx);
-        self.entries.push(Activity::<T>::new(volume, self.next_id, item));
+        let next_id = self.next_id;
+        self.entries.push(Activity::<T>::new(volume, next_id, item));
         self.next_id += 1;
+        next_id
     }
 
     fn pop(&mut self) -> Option<(f64, T)> {
@@ -128,7 +130,7 @@ impl<T> ThroughputSharingModel<T> for SlowFairThroughputSharingModel<T> {
         None
     }
 
-    fn peek(&self) -> Option<(f64, &T)> {
+    fn peek(&mut self) -> Option<(f64, &T)> {
         self.entries.peek().map(|entry| {
             (
                 self.last_recalculation_time + entry.remaining_volume / self.last_throughput_per_item,

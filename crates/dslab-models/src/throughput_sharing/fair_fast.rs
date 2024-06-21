@@ -9,6 +9,7 @@ use dslab_core::SimulationContext;
 
 use super::functions::{make_constant_throughput_fn, ConstantFactorFn};
 use super::model::{ActivityFactorFn, ResourceThroughputFn, ThroughputSharingModel};
+use super::ActivityId;
 
 const TOTAL_WORK_MAX_VALUE: f64 = 1e12;
 
@@ -48,6 +49,9 @@ impl<T> PartialEq for Activity<T> {
 impl<T> Eq for Activity<T> {}
 
 /// Fast implementation of fair throughput sharing model.
+///
+/// Note that it does not support activity cancellation, if you need it see
+/// [`FairThroughputSharingModelWithCancel`](crate::throughput_sharing::FairThroughputSharingModelWithCancel).
 pub struct FairThroughputSharingModel<T> {
     activities: BinaryHeap<Activity<T>>,
     throughput_function: ResourceThroughputFn,
@@ -106,7 +110,7 @@ impl<T> FairThroughputSharingModel<T> {
 }
 
 impl<T> ThroughputSharingModel<T> for FairThroughputSharingModel<T> {
-    fn insert(&mut self, item: T, volume: f64, ctx: &mut SimulationContext) {
+    fn insert(&mut self, item: T, volume: f64, ctx: &SimulationContext) -> ActivityId {
         if !self.activities.is_empty() {
             self.increment_total_work((ctx.time() - self.last_update) * self.throughput_per_activity);
         }
@@ -114,10 +118,12 @@ impl<T> ThroughputSharingModel<T> for FairThroughputSharingModel<T> {
         let finish_work = self.total_work + volume;
         self.activities
             .push(Activity::<T>::new(self.next_id, item, finish_work));
+        let next_id = self.next_id;
         self.next_id += 1;
         let count = self.activities.len();
         self.throughput_per_activity = (self.throughput_function)(count) / count as f64;
         self.last_update = ctx.time();
+        next_id
     }
 
     fn pop(&mut self) -> Option<(f64, T)> {
@@ -137,7 +143,7 @@ impl<T> ThroughputSharingModel<T> for FairThroughputSharingModel<T> {
         None
     }
 
-    fn peek(&self) -> Option<(f64, &T)> {
+    fn peek(&mut self) -> Option<(f64, &T)> {
         self.activities.peek().map(|entry| {
             (
                 self.last_update + (entry.finish_work - self.total_work) / self.throughput_per_activity,

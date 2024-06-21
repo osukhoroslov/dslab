@@ -2,20 +2,29 @@
 
 use dslab_core::context::SimulationContext;
 
+/// Type alias for activity identifier.
+pub type ActivityId = u64;
+
 /// Trait for throughput sharing model.
 pub trait ThroughputSharingModel<T> {
     /// Adds new activity into the model.
     ///
     /// Activity is represented by `item`, has amount of work `volume` and starts at `ctx.time()`.
-    fn insert(&mut self, item: T, volume: f64, ctx: &mut SimulationContext);
+    fn insert(&mut self, item: T, volume: f64, ctx: &SimulationContext) -> ActivityId;
     /// Returns the next activity completion time (if any) along with corresponding activity item.
     ///
     /// The returned activity is removed from the model.
     fn pop(&mut self) -> Option<(f64, T)>;
+    /// Cancels the activity with given `id` at `ctx.time()`.
+    ///
+    /// If the activity is still running returns the activity and the completed work volume, otherwise returns `None`.
+    fn cancel(&mut self, _id: ActivityId, _ctx: &SimulationContext) -> Option<(f64, T)> {
+        unimplemented!()
+    }
     /// Returns the next activity completion time (if any) along with corresponding activity item.
     ///
     /// In contrast to `pop`, the returned activity is not removed from the model.
-    fn peek(&self) -> Option<(f64, &T)>;
+    fn peek(&mut self) -> Option<(f64, &T)>;
 }
 
 /// Function that computes the total resource throughput based on the number of concurrent activities.
@@ -45,5 +54,5 @@ pub trait ActivityFactorFn<T> {
     /// to scale the activity volume. When a new activity is added to a model, the factor value obtained from
     /// `get_factor` is used to scale the activity volume as follows: `new_volume = volume / factor`. This achieves
     /// the same effect as changing the effective activity throughput.
-    fn get_factor(&mut self, item: &T, ctx: &mut SimulationContext) -> f64;
+    fn get_factor(&mut self, item: &T, ctx: &SimulationContext) -> f64;
 }

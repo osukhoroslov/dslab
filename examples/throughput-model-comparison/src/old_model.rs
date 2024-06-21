@@ -4,7 +4,7 @@ use std::collections::BinaryHeap;
 use sugars::boxed;
 
 use dslab_core::SimulationContext;
-use dslab_models::throughput_sharing::ThroughputSharingModel;
+use dslab_models::throughput_sharing::{ActivityId, ThroughputSharingModel};
 
 struct Activity<T> {
     position: f64,
@@ -95,7 +95,7 @@ impl<T> FairThroughputSharingModel<T> {
 }
 
 impl<T> ThroughputSharingModel<T> for FairThroughputSharingModel<T> {
-    fn insert(&mut self, item: T, volume: f64, ctx: &mut SimulationContext) {
+    fn insert(&mut self, item: T, volume: f64, ctx: &SimulationContext) -> ActivityId {
         if self.entries.is_empty() {
             self.last_throughput_per_item = (self.throughput_function)(1);
             let finish_time = ctx.time() + volume / self.last_throughput_per_item;
@@ -114,7 +114,9 @@ impl<T> ThroughputSharingModel<T> for FairThroughputSharingModel<T> {
                 item,
             ));
         }
+        let next_id = self.next_id;
         self.next_id += 1;
+        next_id
     }
 
     fn pop(&mut self) -> Option<(f64, T)> {
@@ -135,7 +137,7 @@ impl<T> ThroughputSharingModel<T> for FairThroughputSharingModel<T> {
         None
     }
 
-    fn peek(&self) -> Option<(f64, &T)> {
+    fn peek(&mut self) -> Option<(f64, &T)> {
         self.entries
             .peek()
             .map(|entry| (self.time_fn.at(entry.position), &entry.item))

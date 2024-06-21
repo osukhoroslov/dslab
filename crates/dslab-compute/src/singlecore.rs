@@ -144,7 +144,7 @@ impl EventHandler for Compute {
                     self.throughput_model.insert(
                         RunningComputation::new(event.id, memory, requester),
                         flops,
-                        &mut self.ctx,
+                        &self.ctx,
                     );
                     if let Some((time, computation)) = self.throughput_model.peek() {
                         self.next_event = self.ctx.emit_self(

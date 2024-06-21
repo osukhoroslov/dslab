@@ -30,7 +30,7 @@ impl ConstantFactorFn {
 }
 
 impl<T> ActivityFactorFn<T> for ConstantFactorFn {
-    fn get_factor(&mut self, _: &T, _: &mut SimulationContext) -> f64 {
+    fn get_factor(&mut self, _: &T, _: &SimulationContext) -> f64 {
         self.value
     }
 }
@@ -48,7 +48,7 @@ impl<Dist: Distribution<f64>> RandomizedFactorFn<Dist> {
 }
 
 impl<T, Dist: Distribution<f64>> ActivityFactorFn<T> for RandomizedFactorFn<Dist> {
-    fn get_factor(&mut self, _: &T, ctx: &mut SimulationContext) -> f64 {
+    fn get_factor(&mut self, _: &T, ctx: &SimulationContext) -> f64 {
         ctx.sample_from_distribution(&self.dist)
     }
 }
@@ -76,7 +76,7 @@ impl EmpiricalFactorFn {
 }
 
 impl<T> ActivityFactorFn<T> for EmpiricalFactorFn {
-    fn get_factor(&mut self, _: &T, ctx: &mut SimulationContext) -> f64 {
+    fn get_factor(&mut self, _: &T, ctx: &SimulationContext) -> f64 {
         self.values[ctx.sample_from_distribution(&self.dist)]
     }
 }

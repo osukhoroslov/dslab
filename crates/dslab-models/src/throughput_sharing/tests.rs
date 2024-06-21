@@ -6,6 +6,7 @@ use super::fair_fast::FairThroughputSharingModel;
 use super::fair_slow::SlowFairThroughputSharingModel;
 use super::functions::make_constant_throughput_fn;
 use super::model::{ActivityFactorFn, ThroughputSharingModel};
+use super::FairThroughputSharingModelWithCancel;
 
 fn assert_float_eq(x: f64, y: f64, eps: f64) {
     assert!(
@@ -18,6 +19,7 @@ fn assert_float_eq(x: f64, y: f64, eps: f64) {
 
 struct ModelsTester {
     fast_model: FairThroughputSharingModel<u32>,
+    fast_model_with_cancel: FairThroughputSharingModelWithCancel<u32>,
     slow_model: SlowFairThroughputSharingModel<u32>,
     sim: Simulation,
     ctx: SimulationContext,
@@ -29,6 +31,7 @@ impl ModelsTester {
         let ctx = sim.create_context("test");
         Self {
             fast_model: FairThroughputSharingModel::with_fixed_throughput(bandwidth),
+            fast_model_with_cancel: FairThroughputSharingModelWithCancel::with_fixed_throughput(bandwidth),
             slow_model: SlowFairThroughputSharingModel::with_fixed_throughput(bandwidth),
             sim,
             ctx,
@@ -40,6 +43,9 @@ impl ModelsTester {
         let ctx = sim.create_context("test");
         Self {
             fast_model: FairThroughputSharingModel::with_dynamic_throughput(boxed!(throughput_function)),
+            fast_model_with_cancel: FairThroughputSharingModelWithCancel::with_dynamic_throughput(boxed!(
+                throughput_function
+            )),
             slow_model: SlowFairThroughputSharingModel::with_dynamic_throughput(boxed!(throughput_function)),
             sim,
             ctx,
@@ -53,10 +59,16 @@ impl ModelsTester {
     fn insert_and_compare(&mut self, item: u32, volume: f64) {
         self.fast_model.insert(item, volume, &mut self.ctx);
         self.slow_model.insert(item, volume, &mut self.ctx);
+        self.fast_model_with_cancel.insert(item, volume, &mut self.ctx);
+
         let fast_item = self.fast_model.peek().unwrap();
         let slow_item = self.slow_model.peek().unwrap();
+        let fast_item_with_cancel = self.fast_model_with_cancel.peek().unwrap();
+
         assert_float_eq(fast_item.0, slow_item.0, 1e-12);
+        assert_float_eq(fast_item_with_cancel.0, slow_item.0, 1e-12);
         assert_eq!(fast_item.1, slow_item.1);
+        assert_eq!(fast_item_with_cancel.1, slow_item.1)
     }
 
     fn pop_all_and_compare(&mut self) -> Vec<(f64, u32)> {
@@ -68,11 +80,20 @@ impl ModelsTester {
         while let Some((time, item)) = self.slow_model.pop() {
             slow_model_result.push((time, item));
         }
+        let mut fast_model_with_cancel_result = vec![];
+        while let Some((time, item)) = self.fast_model_with_cancel.pop() {
+            fast_model_with_cancel_result.push((time, item));
+        }
         println!();
         for i in 0..fast_model_result.len() {
             assert_float_eq(fast_model_result[i].0, slow_model_result[i].0, 1e-12);
-            println!("{} {}", fast_model_result[i].0, slow_model_result[i].0);
+            assert_float_eq(fast_model_with_cancel_result[i].0, slow_model_result[i].0, 1e-12);
+            println!(
+                "{} {} {}",
+                fast_model_with_cancel_result[i].0, fast_model_result[i].0, slow_model_result[i].0
+            );
             assert_eq!(fast_model_result[i].1, slow_model_result[i].1);
+            assert_eq!(fast_model_with_cancel_result[i].1, slow_model_result[i].1);
         }
         fast_model_result
     }
@@ -192,7 +213,7 @@ fn dynamic_throughput() {
 struct TestThroughputFactorFunction {}
 
 impl ActivityFactorFn<u32> for TestThroughputFactorFunction {
-    fn get_factor(&mut self, item: &u32, _ctx: &mut SimulationContext) -> f64 {
+    fn get_factor(&mut self, item: &u32, _ctx: &SimulationContext) -> f64 {
         if *item == 0 {
             0.8
         } else {
@@ -204,15 +225,15 @@ impl ActivityFactorFn<u32> for TestThroughputFactorFunction {
 #[test]
 fn throughput_factor() {
     let mut sim = Simulation::new(123);
-    let mut ctx = sim.create_context("test");
+    let ctx = sim.create_context("test");
     let tf = make_constant_throughput_fn(100.);
     let mut model: FairThroughputSharingModel<u32> =
         FairThroughputSharingModel::new(tf, boxed!(TestThroughputFactorFunction {}));
-    model.insert(0, 160., &mut ctx);
+    model.insert(0, 160., &ctx);
     sim.step_until_time(1.);
-    model.insert(1, 100., &mut ctx);
+    model.insert(1, 100., &ctx);
     sim.step_until_time(2.);
-    model.insert(2, 25., &mut ctx);
+    model.insert(2, 25., &ctx);
     assert_eq!(model.pop(), Some((3.5, 0)));
     assert_eq!(model.pop(), Some((3.5, 2)));
     assert_eq!(model.pop(), Some((4.5, 1)));
@@ -229,15 +250,91 @@ fn throughput_factor_and_degradation() {
     }
 
     let mut sim = Simulation::new(123);
-    let mut ctx = sim.create_context("test");
+    let ctx = sim.create_context("test");
     let mut model: FairThroughputSharingModel<u32> =
         FairThroughputSharingModel::new(boxed!(throughput_function), boxed!(TestThroughputFactorFunction {}));
-    model.insert(0, 160., &mut ctx);
+    model.insert(0, 160., &ctx);
     sim.step_until_time(1.);
-    model.insert(1, 100., &mut ctx);
+    model.insert(1, 100., &ctx);
     sim.step_until_time(2.);
-    model.insert(2, 25., &mut ctx);
+    model.insert(2, 25., &ctx);
     assert_eq!(model.pop(), Some((3.875, 2)));
     assert_eq!(model.pop(), Some((4.125, 0)));
     assert_eq!(model.pop(), Some((5.125, 1)));
+}
+
+#[test]
+fn simple_cancellation() {
+    let mut sim = Simulation::new(123);
+    let ctx = sim.create_context("test");
+    let mut model: FairThroughputSharingModelWithCancel<u32> =
+        FairThroughputSharingModelWithCancel::with_fixed_throughput(100.);
+
+    model.insert(0, 200., &ctx);
+    let id2 = model.insert(1, 200., &ctx);
+    sim.step_until_time(1.);
+
+    let (volume, item) = model.cancel(id2, &ctx).unwrap();
+    assert_eq!(volume, 50.);
+    assert_eq!(item, 1);
+    assert_eq!(model.pop(), Some((2.5, 0)));
+}
+
+#[test]
+fn check_cancel_recalculation() {
+    let mut sim = Simulation::new(123);
+    let ctx = sim.create_context("test");
+    let mut model: FairThroughputSharingModelWithCancel<u32> =
+        FairThroughputSharingModelWithCancel::with_fixed_throughput(100.);
+
+    let first_id = model.insert(0, 225., &ctx);
+    let ids = [
+        model.insert(1, 50., &ctx),
+        model.insert(2, 50., &ctx),
+        model.insert(3, 50., &ctx),
+    ];
+    sim.step_until_time(1.);
+
+    assert_eq!(model.cancel(ids[0], &ctx), Some((25., 1)));
+    assert_eq!(model.cancel(ids[1], &ctx), Some((25., 2)));
+    assert_eq!(model.cancel(ids[2], &ctx), Some((25., 3)));
+
+    let (next_time, next_value) = model.peek().unwrap();
+    assert_eq!(next_time, 3.);
+    assert_eq!(*next_value, 0);
+
+    sim.step_until_time(2.);
+
+    model.insert(4, 500., &ctx);
+    model.insert(5, 500., &ctx);
+    model.insert(6, 500., &ctx);
+
+    sim.step_until_time(3.);
+
+    assert_eq!(model.cancel(first_id, &ctx), Some((150., 0)));
+
+    assert_eq!(model.pop(), Some((17.25, 4)));
+    assert_eq!(model.pop(), Some((17.25, 5)));
+    assert_eq!(model.pop(), Some((17.25, 6)));
+}
+
+#[test]
+fn invalid_cancellation() {
+    let mut sim = Simulation::new(123);
+    let ctx = sim.create_context("test");
+    let mut model: FairThroughputSharingModelWithCancel<u32> =
+        FairThroughputSharingModelWithCancel::with_fixed_throughput(100.);
+
+    model.insert(0, 200., &ctx);
+    let id2 = model.insert(1, 200., &ctx);
+    sim.step_until_time(1.);
+
+    let (volume, item) = model.cancel(id2, &ctx).unwrap();
+    assert_eq!(volume, 50.);
+    assert_eq!(item, 1);
+
+    assert_eq!(model.cancel(id2, &ctx), None);
+    assert_eq!(model.cancel(1000, &ctx), None);
+
+    assert_eq!(model.pop(), Some((2.5, 0)));
 }
