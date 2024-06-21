@@ -137,6 +137,8 @@
 <a href="#137" id="137">137</a>
 <a href="#138" id="138">138</a>
 <a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Slow implementation of fair throughput sharing model, which recalculates all event times
 //! at each activity creation and completion.
 
@@ -148,11 +150,11 @@
 <span class="kw">use </span>dslab_core::SimulationContext;
 
 <span class="kw">use </span><span class="kw">super</span>::functions::{make_constant_throughput_fn, ConstantFactorFn};
-<span class="kw">use </span><span class="kw">super</span>::model::{ActivityFactorFn, ResourceThroughputFn, ThroughputSharingModel};
+<span class="kw">use </span><span class="kw">super</span>::model::{ActivityFactorFn, ActivityId, ResourceThroughputFn, ThroughputSharingModel};
 
 <span class="kw">struct </span>Activity&lt;T&gt; {
     remaining_volume: f64,
-    id: u64,
+    id: ActivityId,
     item: T,
 }
 
@@ -244,12 +246,14 @@
 }
 
 <span class="kw">impl</span>&lt;T&gt; ThroughputSharingModel&lt;T&gt; <span class="kw">for </span>SlowFairThroughputSharingModel&lt;T&gt; {
-    <span class="kw">fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, item: T, volume: f64, ctx: <span class="kw-2">&amp;mut </span>SimulationContext) {
+    <span class="kw">fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, item: T, volume: f64, ctx: <span class="kw-2">&amp;</span>SimulationContext) -&gt; ActivityId {
         <span class="kw">let </span>new_count = <span class="self">self</span>.entries.len() + <span class="number">1</span>;
         <span class="self">self</span>.recalculate(ctx.time(), (<span class="self">self</span>.throughput_function)(new_count) / new_count <span class="kw">as </span>f64);
         <span class="kw">let </span>volume = volume / <span class="self">self</span>.factor_function.get_factor(<span class="kw-2">&amp;</span>item, ctx);
-        <span class="self">self</span>.entries.push(Activity::&lt;T&gt;::new(volume, <span class="self">self</span>.next_id, item));
+        <span class="kw">let </span>next_id = <span class="self">self</span>.next_id;
+        <span class="self">self</span>.entries.push(Activity::&lt;T&gt;::new(volume, next_id, item));
         <span class="self">self</span>.next_id += <span class="number">1</span>;
+        next_id
     }
 
     <span class="kw">fn </span>pop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;(f64, T)&gt; {
@@ -267,7 +271,7 @@
         <span class="prelude-val">None
     </span>}
 
-    <span class="kw">fn </span>peek(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;(f64, <span class="kw-2">&amp;</span>T)&gt; {
+    <span class="kw">fn </span>peek(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;(f64, <span class="kw-2">&amp;</span>T)&gt; {
         <span class="self">self</span>.entries.peek().map(|entry| {
             (
                 <span class="self">self</span>.last_recalculation_time + entry.remaining_volume / <span class="self">self</span>.last_throughput_per_item,

@@ -14,9 +14,12 @@
 <a href="#14" id="14">14</a>
 <a href="#15" id="15">15</a>
 <a href="#16" id="16">16</a>
+<a href="#17" id="17">17</a>
+<a href="#18" id="18">18</a>
 </pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">"README.md"</span>)]
 
 </span><span class="kw">mod </span>fair_fast;
+<span class="kw">mod </span>fair_fast_with_cancel;
 <span class="kw">mod </span>fair_slow;
 <span class="kw">mod </span>functions;
 <span class="kw">mod </span>model;
@@ -25,9 +28,10 @@
 </span><span class="kw">mod </span>tests;
 
 <span class="kw">pub use </span>fair_fast::FairThroughputSharingModel;
+<span class="kw">pub use </span>fair_fast_with_cancel::FairThroughputSharingModelWithCancel;
 <span class="kw">pub use </span>fair_slow::SlowFairThroughputSharingModel;
 <span class="kw">pub use </span>functions::{
     make_constant_throughput_fn, make_uniform_factor_fn, ConstantFactorFn, EmpiricalFactorFn, RandomizedFactorFn,
 };
-<span class="kw">pub use </span>model::{ActivityFactorFn, ResourceThroughputFn, ThroughputSharingModel};
+<span class="kw">pub use </span>model::{ActivityFactorFn, ActivityId, ResourceThroughputFn, ThroughputSharingModel};
 </code></pre></div></section></main></body></html>

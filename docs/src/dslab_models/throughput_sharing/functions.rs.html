@@ -112,7 +112,7 @@
 }
 
 <span class="kw">impl</span>&lt;T&gt; ActivityFactorFn&lt;T&gt; <span class="kw">for </span>ConstantFactorFn {
-    <span class="kw">fn </span>get_factor(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;</span>T, <span class="kw">_</span>: <span class="kw-2">&amp;mut </span>SimulationContext) -&gt; f64 {
+    <span class="kw">fn </span>get_factor(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;</span>T, <span class="kw">_</span>: <span class="kw-2">&amp;</span>SimulationContext) -&gt; f64 {
         <span class="self">self</span>.value
     }
 }
@@ -130,7 +130,7 @@
 }
 
 <span class="kw">impl</span>&lt;T, Dist: Distribution&lt;f64&gt;&gt; ActivityFactorFn&lt;T&gt; <span class="kw">for </span>RandomizedFactorFn&lt;Dist&gt; {
-    <span class="kw">fn </span>get_factor(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;</span>T, ctx: <span class="kw-2">&amp;mut </span>SimulationContext) -&gt; f64 {
+    <span class="kw">fn </span>get_factor(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;</span>T, ctx: <span class="kw-2">&amp;</span>SimulationContext) -&gt; f64 {
         ctx.sample_from_distribution(<span class="kw-2">&amp;</span><span class="self">self</span>.dist)
     }
 }
@@ -158,7 +158,7 @@
 }
 
 <span class="kw">impl</span>&lt;T&gt; ActivityFactorFn&lt;T&gt; <span class="kw">for </span>EmpiricalFactorFn {
-    <span class="kw">fn </span>get_factor(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;</span>T, ctx: <span class="kw-2">&amp;mut </span>SimulationContext) -&gt; f64 {
+    <span class="kw">fn </span>get_factor(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;</span>T, ctx: <span class="kw-2">&amp;</span>SimulationContext) -&gt; f64 {
         <span class="self">self</span>.values[ctx.sample_from_distribution(<span class="kw-2">&amp;</span><span class="self">self</span>.dist)]
     }
 }

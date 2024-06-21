@@ -146,6 +146,12 @@
 <a href="#146" id="146">146</a>
 <a href="#147" id="147">147</a>
 <a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Fast implementation of fair throughput sharing model.
 
 </span><span class="kw">use </span>std::cmp::Ordering;
@@ -157,6 +163,7 @@
 
 <span class="kw">use </span><span class="kw">super</span>::functions::{make_constant_throughput_fn, ConstantFactorFn};
 <span class="kw">use </span><span class="kw">super</span>::model::{ActivityFactorFn, ResourceThroughputFn, ThroughputSharingModel};
+<span class="kw">use </span><span class="kw">super</span>::ActivityId;
 
 <span class="kw">const </span>TOTAL_WORK_MAX_VALUE: f64 = <span class="number">1e12</span>;
 
@@ -196,6 +203,9 @@
 <span class="kw">impl</span>&lt;T&gt; Eq <span class="kw">for </span>Activity&lt;T&gt; {}
 
 <span class="doccomment">/// Fast implementation of fair throughput sharing model.
+///
+/// Note that it does not support activity cancellation, if you need it see
+/// [`FairThroughputSharingModelWithCancel`](crate::throughput_sharing::FairThroughputSharingModelWithCancel).
 </span><span class="kw">pub struct </span>FairThroughputSharingModel&lt;T&gt; {
     activities: BinaryHeap&lt;Activity&lt;T&gt;&gt;,
     throughput_function: ResourceThroughputFn,
@@ -254,7 +264,7 @@
 }
 
 <span class="kw">impl</span>&lt;T&gt; ThroughputSharingModel&lt;T&gt; <span class="kw">for </span>FairThroughputSharingModel&lt;T&gt; {
-    <span class="kw">fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, item: T, volume: f64, ctx: <span class="kw-2">&amp;mut </span>SimulationContext) {
+    <span class="kw">fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, item: T, volume: f64, ctx: <span class="kw-2">&amp;</span>SimulationContext) -&gt; ActivityId {
         <span class="kw">if </span>!<span class="self">self</span>.activities.is_empty() {
             <span class="self">self</span>.increment_total_work((ctx.time() - <span class="self">self</span>.last_update) * <span class="self">self</span>.throughput_per_activity);
         }
@@ -262,10 +272,12 @@
         <span class="kw">let </span>finish_work = <span class="self">self</span>.total_work + volume;
         <span class="self">self</span>.activities
             .push(Activity::&lt;T&gt;::new(<span class="self">self</span>.next_id, item, finish_work));
+        <span class="kw">let </span>next_id = <span class="self">self</span>.next_id;
         <span class="self">self</span>.next_id += <span class="number">1</span>;
         <span class="kw">let </span>count = <span class="self">self</span>.activities.len();
         <span class="self">self</span>.throughput_per_activity = (<span class="self">self</span>.throughput_function)(count) / count <span class="kw">as </span>f64;
         <span class="self">self</span>.last_update = ctx.time();
+        next_id
     }
 
     <span class="kw">fn </span>pop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;(f64, T)&gt; {
@@ -285,7 +297,7 @@
         <span class="prelude-val">None
     </span>}
 
-    <span class="kw">fn </span>peek(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;(f64, <span class="kw-2">&amp;</span>T)&gt; {
+    <span class="kw">fn </span>peek(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;(f64, <span class="kw-2">&amp;</span>T)&gt; {
         <span class="self">self</span>.activities.peek().map(|entry| {
             (
                 <span class="self">self</span>.last_update + (entry.finish_work - <span class="self">self</span>.total_work) / <span class="self">self</span>.throughput_per_activity,
