@@ -5,7 +5,7 @@ license = "MIT OR Apache-2.0"
 edition = "2021"
 
 [dependencies]
-dslab-core = { path = "../../crates/dslab-core" }
+simcore = "0.1"
 dslab-faas = { path = "../../crates/dslab-faas" }
 clap = { version = "4.1.1", features = ["derive"] }
 itertools = "0.10.5"

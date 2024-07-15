@@ -6,7 +6,6 @@ use std::time::Instant;
 use clap::{Parser, ValueEnum};
 use itertools::Itertools;
 
-use dslab_core::simulation::Simulation;
 use dslab_faas::coldstart::FixedTimeColdStartPolicy;
 use dslab_faas::config::Config;
 use dslab_faas::cpu::IgnoredCpuPolicy;
@@ -16,6 +15,7 @@ use dslab_faas::extra::azure_trace_2019::{
 use dslab_faas::resource::ResourceProvider;
 use dslab_faas::simulation::ServerlessSimulation;
 use dslab_faas::trace::Trace;
+use simcore::simulation::Simulation;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 enum Preset {

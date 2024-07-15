@@ -4,9 +4,9 @@ use std::boxed::Box;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use dslab_core::cast;
-use dslab_core::event::Event;
-use dslab_core::handler::EventHandler;
+use simcore::cast;
+use simcore::event::Event;
+use simcore::handler::EventHandler;
 
 use crate::deployer::IdleDeployer;
 use crate::event::{IdleDeployEvent, InvocationStartEvent, SimulationEndEvent};

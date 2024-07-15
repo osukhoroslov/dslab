@@ -4,7 +4,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use dslab_compute::multicore::{Compute, CoresDependency};
-use dslab_core::simulation::Simulation;
+use simcore::simulation::Simulation;
 
 use crate::dag::DAG;
 use crate::network::NetworkConfig;
@@ -101,35 +101,35 @@ impl DagSimulation {
 
     /// Performs the specified number of steps through the simulation.
     ///
-    /// See [Simulation::steps()](dslab_core::simulation::Simulation::steps).
+    /// See [Simulation::steps()](simcore::simulation::Simulation::steps).
     pub fn steps(&mut self, step_count: u64) -> bool {
         self.sim.steps(step_count)
     }
 
     /// Steps through the simulation with duration limit.
     ///
-    /// See [Simulation::step_for_duration()](dslab_core::simulation::Simulation::step_for_duration).
+    /// See [Simulation::step_for_duration()](simcore::simulation::Simulation::step_for_duration).
     pub fn step_for_duration(&mut self, time: f64) {
         self.sim.step_for_duration(time);
     }
 
     /// Steps through the simulation until there are no pending events left.
     ///
-    /// See [Simulation::step_until_no_events()](dslab_core::simulation::Simulation::step_until_no_events).
+    /// See [Simulation::step_until_no_events()](simcore::simulation::Simulation::step_until_no_events).
     pub fn step_until_no_events(&mut self) {
         self.sim.step_until_no_events();
     }
 
     /// Returns the total number of created events.
     ///
-    /// See [Simulation::event_count()](dslab_core::simulation::Simulation::event_count).
+    /// See [Simulation::event_count()](simcore::simulation::Simulation::event_count).
     pub fn event_count(&self) -> u64 {
         self.sim.event_count()
     }
 
     /// Returns the current simulation time.
     ///
-    /// See [Simulation::time()](dslab_core::simulation::Simulation::time).
+    /// See [Simulation::time()](simcore::simulation::Simulation::time).
     pub fn time(&mut self) -> f64 {
         self.sim.time()
     }

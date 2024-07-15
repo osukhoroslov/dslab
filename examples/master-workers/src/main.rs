@@ -13,10 +13,10 @@ use rand_pcg::Pcg64;
 use sugars::{boxed, rc, refcell};
 
 use dslab_compute::multicore::{Compute, CoresDependency};
-use dslab_core::simulation::Simulation;
 use dslab_network::models::{ConstantBandwidthNetworkModel, SharedBandwidthNetworkModel};
 use dslab_network::{Network, NetworkModel};
 use dslab_storage::disk::DiskBuilder;
+use simcore::simulation::Simulation;
 
 use crate::common::Start;
 use crate::master::Master;

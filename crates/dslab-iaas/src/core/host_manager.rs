@@ -8,11 +8,11 @@ use std::rc::Rc;
 
 use serde::Serialize;
 
-use dslab_core::cast;
-use dslab_core::context::SimulationContext;
-use dslab_core::event::Event;
-use dslab_core::handler::EventHandler;
 use dslab_models::power::host::{HostPowerModel, HostState};
+use simcore::cast;
+use simcore::context::SimulationContext;
+use simcore::event::Event;
+use simcore::handler::EventHandler;
 
 use crate::core::common::AllocationVerdict;
 use crate::core::config::sim_config::SimulationConfig;

@@ -3,7 +3,7 @@
 use rand::distributions::{Distribution, Uniform, WeightedError, WeightedIndex};
 use sugars::boxed;
 
-use dslab_core::context::SimulationContext;
+use simcore::context::SimulationContext;
 
 use crate::throughput_sharing::model::ActivityFactorFn;
 use crate::throughput_sharing::ResourceThroughputFn;

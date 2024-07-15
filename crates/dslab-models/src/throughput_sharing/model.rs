@@ -1,6 +1,6 @@
 //! Core elements of the throughput sharing model.
 
-use dslab_core::context::SimulationContext;
+use simcore::context::SimulationContext;
 
 /// Type alias for activity identifier.
 pub type ActivityId = u64;

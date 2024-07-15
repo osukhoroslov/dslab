@@ -61,4 +61,3 @@ jobs:
       - name: Run tests
         run: |
           cargo test --verbose
-          cargo test --features async_mode --verbose

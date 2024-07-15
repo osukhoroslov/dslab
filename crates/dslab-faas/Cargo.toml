@@ -5,8 +5,7 @@ license = "MIT OR Apache-2.0"
 edition = "2021"
 
 [dependencies]
-dslab-core = { path = "../dslab-core" }
-
+simcore = "0.1"
 arima = "0.2"
 csv = "1.1"
 indexmap = "1.8.2"

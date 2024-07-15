@@ -7,8 +7,8 @@ use std::rc::Rc;
 
 use rand::distributions::uniform::{SampleRange, SampleUniform};
 
-use dslab_core::handler::EventCancellationPolicy;
-use dslab_core::{cast, Simulation};
+use simcore::handler::EventCancellationPolicy;
+use simcore::{cast, Simulation};
 
 use crate::events::MessageReceived;
 use crate::logger::{LogEntry, Logger};

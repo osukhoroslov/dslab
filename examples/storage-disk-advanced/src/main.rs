@@ -7,12 +7,12 @@ use log::LevelFilter;
 use rand::distributions::Uniform;
 use sugars::{boxed, rc, refcell};
 
-use dslab_core::cast;
-use dslab_core::context::SimulationContext;
-use dslab_core::event::Event;
-use dslab_core::handler::EventHandler;
-use dslab_core::simulation::Simulation;
-use dslab_core::{log_error, log_info};
+use simcore::cast;
+use simcore::context::SimulationContext;
+use simcore::event::Event;
+use simcore::handler::EventHandler;
+use simcore::simulation::Simulation;
+use simcore::{log_error, log_info};
 
 use dslab_models::throughput_sharing::{make_constant_throughput_fn, make_uniform_factor_fn, ActivityFactorFn};
 use dslab_storage::disk::{Disk, DiskBuilder, DiskOperation};

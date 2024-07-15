@@ -1,7 +1,7 @@
 //! Trait for implementation of custom components.
 
-use dslab_core::context::SimulationContext;
-use dslab_core::handler::EventHandler;
+use simcore::context::SimulationContext;
+use simcore::handler::EventHandler;
 
 pub trait CustomComponent: EventHandler {
     /// Creates new component with provided simulation context.

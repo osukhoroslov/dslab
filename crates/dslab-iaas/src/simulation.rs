@@ -7,11 +7,11 @@ use std::rc::Rc;
 
 use sugars::{rc, refcell};
 
-use dslab_core::context::SimulationContext;
-use dslab_core::simulation::Simulation;
-use dslab_core::Id;
 use dslab_models::power::cpu_models::linear::LinearCpuPowerModel;
 use dslab_models::power::host::{HostPowerModel, HostPowerModelBuilder};
+use simcore::context::SimulationContext;
+use simcore::simulation::Simulation;
+use simcore::Id;
 
 use crate::core::config::sim_config::SimulationConfig;
 use crate::core::events::allocation::{AllocationRequest, MigrationRequest};

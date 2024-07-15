@@ -6,10 +6,10 @@ use std::rc::Rc;
 
 use serde::{Deserialize, Serialize};
 
-use dslab_core::context::SimulationContext;
-use dslab_core::Id;
 use dslab_network::models::{ConstantBandwidthNetworkModel, SharedBandwidthNetworkModel, TopologyAwareNetworkModel};
 use dslab_network::{Link, Network};
+use simcore::context::SimulationContext;
+use simcore::Id;
 
 use crate::resource::Resource;
 

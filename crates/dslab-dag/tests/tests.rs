@@ -5,7 +5,7 @@ use rand::prelude::*;
 use rand_pcg::Pcg64;
 
 use dslab_compute::multicore::CoresDependency;
-use dslab_core::EPSILON;
+use simcore::EPSILON;
 
 use dslab_dag::dag::DAG;
 use dslab_dag::dag_simulation::DagSimulation;

@@ -5,7 +5,7 @@ use std::rc::Rc;
 use env_logger::Builder;
 use sugars::{boxed, rc, refcell};
 
-use dslab_core::{cast, log_info, Event, EventHandler, Id, Simulation, SimulationContext};
+use simcore::{cast, log_info, Event, EventHandler, Id, Simulation, SimulationContext};
 
 use dslab_network::models::{SharedBandwidthNetworkModel, TopologyAwareNetworkModel};
 use dslab_network::{DataTransferCompleted, Link, Network};

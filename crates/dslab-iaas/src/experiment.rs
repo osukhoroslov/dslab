@@ -10,7 +10,7 @@ use log::Level;
 use serde::{Deserialize, Serialize};
 use threadpool::ThreadPool;
 
-use dslab_core::Simulation;
+use simcore::Simulation;
 
 use crate::core::config::exp_config::ExperimentConfig;
 use crate::core::config::sim_config::SimulationConfig;

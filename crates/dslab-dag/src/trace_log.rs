@@ -4,8 +4,8 @@ use std::fmt::Formatter;
 use std::io::Write;
 use std::{fmt::Display, fs::File};
 
-use dslab_core::context::SimulationContext;
-use dslab_core::log_debug;
+use simcore::context::SimulationContext;
+use simcore::log_debug;
 
 use serde::{Deserialize, Serialize};
 

@@ -8,10 +8,10 @@ use num::BigInt;
 use rand::prelude::*;
 use rand_pcg::Pcg64;
 
-use dslab_core::Simulation;
 use dslab_models::throughput_sharing::{
     FairThroughputSharingModel, SlowFairThroughputSharingModel, ThroughputSharingModel,
 };
+use simcore::Simulation;
 
 mod rational_model;
 use rational_model::FairThroughputSharingModelRational;

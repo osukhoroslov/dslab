@@ -3,8 +3,8 @@ use std::rc::Rc;
 
 use sugars::{rc, refcell};
 
-use dslab_core::simulation::Simulation;
-use dslab_core::{cast, Event, EventCancellationPolicy, EventHandler};
+use simcore::simulation::Simulation;
+use simcore::{cast, Event, EventCancellationPolicy, EventHandler};
 
 use crate::disk::{Disk, DiskBuilder};
 use crate::events::*;

@@ -1,6 +1,6 @@
 //! Storage model.
 
-use dslab_core::Id;
+use simcore::Id;
 
 /// Information about storage, including its capacity and current usage.
 #[derive(Debug, PartialEq)]

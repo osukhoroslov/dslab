@@ -6,7 +6,7 @@ use std::collections::BinaryHeap;
 
 use sugars::boxed;
 
-use dslab_core::SimulationContext;
+use simcore::SimulationContext;
 
 use super::functions::{make_constant_throughput_fn, ConstantFactorFn};
 use super::model::{ActivityFactorFn, ActivityId, ResourceThroughputFn, ThroughputSharingModel};

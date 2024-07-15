@@ -5,7 +5,7 @@ use std::string::ToString;
 use itertools::Itertools;
 use strum_macros::{Display, EnumIter, EnumString};
 
-use dslab_core::context::SimulationContext;
+use simcore::context::SimulationContext;
 
 use crate::dag::DAG;
 use crate::data_item::DataTransferMode;

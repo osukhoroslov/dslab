@@ -1,6 +1,6 @@
 use sugars::boxed;
 
-use dslab_core::{Simulation, SimulationContext};
+use simcore::{Simulation, SimulationContext};
 
 use super::fair_fast::FairThroughputSharingModel;
 use super::fair_slow::SlowFairThroughputSharingModel;

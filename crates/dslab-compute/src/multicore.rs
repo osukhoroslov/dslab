@@ -5,11 +5,11 @@ use std::collections::HashMap;
 
 use serde::Serialize;
 
-use dslab_core::component::Id;
-use dslab_core::context::SimulationContext;
-use dslab_core::event::Event;
-use dslab_core::handler::EventHandler;
-use dslab_core::{cast, EventId};
+use simcore::component::Id;
+use simcore::context::SimulationContext;
+use simcore::event::Event;
+use simcore::handler::EventHandler;
+use simcore::{cast, EventId};
 
 // STRUCTS -------------------------------------------------------------------------------------------------------------
 

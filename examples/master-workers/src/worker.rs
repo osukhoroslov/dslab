@@ -5,12 +5,12 @@ use std::rc::Rc;
 use serde::Serialize;
 
 use dslab_compute::multicore::*;
-use dslab_core::{cast, log_debug};
-use dslab_core::{Event, EventHandler, Id, SimulationContext};
 use dslab_network::{DataTransfer, DataTransferCompleted, Network};
 use dslab_storage::disk::Disk;
 use dslab_storage::events::{DataReadCompleted, DataWriteCompleted};
 use dslab_storage::storage::Storage;
+use simcore::{cast, log_debug};
+use simcore::{Event, EventHandler, Id, SimulationContext};
 
 use crate::common::Start;
 use crate::task::*;

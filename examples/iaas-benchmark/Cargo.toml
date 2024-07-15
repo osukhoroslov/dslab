@@ -5,7 +5,7 @@ license = "MIT OR Apache-2.0"
 edition = "2021"
 
 [dependencies]
-dslab-core = { path = "../../crates/dslab-core" }
+simcore = "0.1"
 dslab-iaas = { path = "../../crates/dslab-iaas" }
 rand = "0.8.3"
 sugars = "3.0.0"

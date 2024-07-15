@@ -4,8 +4,8 @@ use std::cell::RefCell;
 use std::ops::Range;
 use std::rc::Rc;
 
-use dslab_core::context::SimulationContext;
-use dslab_core::simulation::Simulation;
+use simcore::context::SimulationContext;
+use simcore::simulation::Simulation;
 
 use crate::coldstart::ColdStartPolicy;
 use crate::config::Config;
@@ -21,7 +21,7 @@ use crate::stats::{GlobalStats, InvocationStats, Stats};
 use crate::trace::{RequestData, Trace};
 use crate::util::Counter;
 
-pub(crate) type HandlerId = dslab_core::component::Id;
+pub(crate) type HandlerId = simcore::component::Id;
 
 /// Main FaaS simulation class.
 pub struct ServerlessSimulation {

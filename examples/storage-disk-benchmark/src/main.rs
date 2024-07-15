@@ -12,12 +12,12 @@ use random::CustomRandom;
 use serde::Serialize;
 use sugars::{rc, refcell};
 
-use dslab_core::component::Id;
-use dslab_core::context::SimulationContext;
-use dslab_core::event::Event;
-use dslab_core::handler::EventHandler;
-use dslab_core::simulation::Simulation;
-use dslab_core::{cast, log_error, log_info};
+use simcore::component::Id;
+use simcore::context::SimulationContext;
+use simcore::event::Event;
+use simcore::handler::EventHandler;
+use simcore::simulation::Simulation;
+use simcore::{cast, log_error, log_info};
 
 use dslab_storage::disk::{Disk, DiskBuilder};
 use dslab_storage::events::{DataReadCompleted, DataReadFailed};

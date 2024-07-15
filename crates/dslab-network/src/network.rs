@@ -6,11 +6,11 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use serde::Serialize;
 
-use dslab_core::component::Id;
-use dslab_core::context::SimulationContext;
-use dslab_core::event::{Event, EventData, EventId};
-use dslab_core::handler::EventHandler;
-use dslab_core::{cast, log_debug};
+use simcore::component::Id;
+use simcore::context::SimulationContext;
+use simcore::event::{Event, EventData, EventId};
+use simcore::handler::EventHandler;
+use simcore::{cast, log_debug};
 
 use crate::{DataTransfer, DataTransferCompleted, Link, LinkId, NetworkModel, Node, NodeId};
 

@@ -8,9 +8,9 @@ use env_logger::Builder;
 use std::time::Instant;
 use sugars::{rc, refcell};
 
-use dslab_core::Simulation;
 use dslab_network::models::TopologyAwareNetworkModel;
 use dslab_network::Network;
+use simcore::Simulation;
 
 use system::{build_system, Start};
 use topology::*;

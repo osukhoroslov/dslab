@@ -3,7 +3,7 @@
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BinaryHeap, HashSet, VecDeque};
 
-use dslab_core::context::SimulationContext;
+use simcore::context::SimulationContext;
 
 use crate::routing::{RoutingAlgorithm, ShortestPathFloydWarshall};
 use crate::{BandwidthSharingPolicy, DataTransfer, DataTransferCompleted, LinkId, NetworkModel, NodeId, Topology};
