@@ -432,17 +432,17 @@ impl CloudSimulation {
         &self.ctx
     }
 
-    /// Performs the specified number of steps through the simulation (see dslab-core docs).
+    /// Performs the specified number of steps through the simulation (see simcore docs).
     pub fn steps(&mut self, step_count: u64) -> bool {
         self.sim.steps(step_count)
     }
 
-    /// Steps through the simulation with duration limit (see dslab-core docs).
+    /// Steps through the simulation with duration limit (see simcore docs).
     pub fn step_for_duration(&mut self, time: f64) {
         self.sim.step_for_duration(time);
     }
 
-    /// Steps through the simulation until the specified time (see dslab-core docs).
+    /// Steps through the simulation until the specified time (see simcore docs).
     pub fn step_until_time(&mut self, time: f64) {
         self.sim.step_until_time(time);
     }

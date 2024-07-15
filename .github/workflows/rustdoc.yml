@@ -28,9 +28,8 @@ jobs:
           override: true
 
       - name: Build docs
-        run: | 
-          cargo doc --workspace --lib --no-deps
-          cargo doc --package profiling --no-deps 
+        run: |
+          cargo doc --workspace --lib --no-deps 
 
       - name: Deploy docs
         uses: peaceiris/actions-gh-pages@v3
