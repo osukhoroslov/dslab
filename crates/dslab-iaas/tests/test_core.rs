@@ -1,4 +1,4 @@
-use dslab_core::simulation::Simulation;
+use simcore::simulation::Simulation;
 
 use dslab_models::power::cpu_models::constant::ConstantCpuPowerModel;
 use dslab_models::power::host::HostPowerModelBuilder;

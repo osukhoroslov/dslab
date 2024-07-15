@@ -10,13 +10,13 @@
 use serde::Serialize;
 use sugars::boxed;
 
-use dslab_core::component::Id;
-use dslab_core::event::Event;
-use dslab_core::handler::EventHandler;
-use dslab_core::{cast, context::SimulationContext, log_debug, log_error};
 use dslab_models::throughput_sharing::{
     make_constant_throughput_fn, ActivityFactorFn, ConstantFactorFn, FairThroughputSharingModel, ResourceThroughputFn,
 };
+use simcore::component::Id;
+use simcore::event::Event;
+use simcore::handler::EventHandler;
+use simcore::{cast, context::SimulationContext, log_debug, log_error};
 
 use crate::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 use crate::scheduler::{FifoScheduler, Scheduler};

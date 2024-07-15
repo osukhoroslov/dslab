@@ -4,9 +4,9 @@ use std::rc::Rc;
 use serde::Serialize;
 
 use dslab_compute::multicore::*;
-use dslab_core::async_mode::EventKey;
-use dslab_core::{cast, log_debug, StaticEventHandler};
-use dslab_core::{Event, Simulation, SimulationContext};
+use simcore::async_mode::EventKey;
+use simcore::{cast, log_debug, StaticEventHandler};
+use simcore::{Event, Simulation, SimulationContext};
 
 #[derive(Clone, Serialize, Debug)]
 pub struct TaskRequest {

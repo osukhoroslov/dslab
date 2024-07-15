@@ -7,8 +7,8 @@ use std::{
 };
 
 use colored::Colorize;
-use dslab_core::Id;
 use serde::Serialize;
+use simcore::Id;
 
 use crate::{message::Message, util::t};
 

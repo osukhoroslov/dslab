@@ -162,12 +162,12 @@ version = "0.1.0"
 dependencies = [
  "clap 3.2.25",
  "dslab-compute",
- "dslab-core",
  "env_logger 0.9.3",
  "futures",
  "log 0.4.20",
  "serde",
  "serde_json",
+ "simcore",
  "sugars",
 ]
 
@@ -316,14 +316,6 @@ dependencies = [
  "glib-sys",
  "libc",
  "system-deps",
-]
-
-[[package]]
-name = "callbacks-vs-async"
-version = "0.1.0"
-dependencies = [
- "dslab-core",
- "serde",
 ]
 
 [[package]]
@@ -500,10 +492,10 @@ name = "compute-multicore-example"
 version = "0.1.0"
 dependencies = [
  "dslab-compute",
- "dslab-core",
  "env_logger 0.9.3",
  "log 0.4.20",
  "serde",
+ "simcore",
  "sugars",
 ]
 
@@ -513,7 +505,6 @@ version = "0.1.0"
 dependencies = [
  "clap 3.2.25",
  "dslab-compute",
- "dslab-core",
  "dslab-network",
  "dslab-storage",
  "env_logger 0.9.3",
@@ -521,6 +512,7 @@ dependencies = [
  "rand 0.8.5",
  "rand_pcg 0.3.1",
  "serde",
+ "simcore",
  "sugars",
 ]
 
@@ -529,10 +521,10 @@ name = "compute-singlecore-example"
 version = "0.1.0"
 dependencies = [
  "dslab-compute",
- "dslab-core",
  "env_logger 0.9.3",
  "log 0.4.20",
  "serde",
+ "simcore",
  "sugars",
 ]
 
@@ -857,29 +849,9 @@ dependencies = [
 name = "dslab-compute"
 version = "0.1.0"
 dependencies = [
- "dslab-core",
  "dslab-models",
  "serde",
-]
-
-[[package]]
-name = "dslab-core"
-version = "0.1.0"
-dependencies = [
- "atty",
- "colored",
- "downcast-rs",
- "dyn-clone",
- "env_logger 0.9.3",
- "erased-serde",
- "futures",
- "log 0.4.20",
- "rand 0.8.5",
- "rand_pcg 0.3.1",
- "rustc-hash 2.0.0",
- "serde",
- "serde_json",
- "serde_type_name",
+ "simcore",
 ]
 
 [[package]]
@@ -887,7 +859,6 @@ name = "dslab-dag"
 version = "0.1.0"
 dependencies = [
  "dslab-compute",
- "dslab-core",
  "dslab-network",
  "indexmap 1.9.3",
  "itertools 0.10.5",
@@ -898,6 +869,7 @@ dependencies = [
  "serde-xml-rs",
  "serde_json",
  "serde_yaml",
+ "simcore",
  "strum 0.24.1",
  "strum_macros 0.24.3",
  "threadpool",
@@ -909,7 +881,6 @@ version = "0.1.0"
 dependencies = [
  "arima",
  "csv",
- "dslab-core",
  "indexmap 1.9.3",
  "itertools 0.10.5",
  "num 0.2.1",
@@ -920,6 +891,7 @@ dependencies = [
  "rv",
  "serde",
  "serde_yaml",
+ "simcore",
  "threadpool",
 ]
 
@@ -928,7 +900,6 @@ name = "dslab-iaas"
 version = "0.1.0"
 dependencies = [
  "csv",
- "dslab-core",
  "dslab-models",
  "dyn-clone",
  "env_logger 0.8.4",
@@ -938,6 +909,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
+ "simcore",
  "sugars",
  "threadpool",
 ]
@@ -947,10 +919,10 @@ name = "dslab-models"
 version = "0.1.0"
 dependencies = [
  "approx 0.5.1",
- "dslab-core",
  "dyn-clone",
  "rand 0.8.5",
  "rustc-hash 2.0.0",
+ "simcore",
  "sugars",
 ]
 
@@ -960,7 +932,6 @@ version = "0.1.0"
 dependencies = [
  "colored",
  "downcast-rs",
- "dslab-core",
  "dyn-clone",
  "lazy_static",
  "log 0.4.20",
@@ -971,6 +942,7 @@ dependencies = [
  "rstest",
  "serde",
  "serde_json",
+ "simcore",
  "sugars",
 ]
 
@@ -990,24 +962,24 @@ dependencies = [
 name = "dslab-network"
 version = "0.1.0"
 dependencies = [
- "dslab-core",
  "dslab-models",
  "indexmap 2.2.2",
  "log 0.4.20",
  "rstest",
  "serde",
+ "simcore",
 ]
 
 [[package]]
 name = "dslab-storage"
 version = "0.1.0"
 dependencies = [
- "dslab-core",
  "dslab-models",
  "log 0.4.20",
  "rand 0.8.5",
  "rand_pcg 0.3.1",
  "serde",
+ "simcore",
  "sugars",
 ]
 
@@ -1091,11 +1063,12 @@ checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
 
 [[package]]
 name = "erased-serde"
-version = "0.3.31"
+version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c138974f9d5e7fe373eb04df7cae98833802ae4b11c24ac7039a21d5af4b26c"
+checksum = "24e2389d65ab4fab27dc2a5de7b191e1f6617d1f1c8855c0dc569c94a4cbb18d"
 dependencies = [
  "serde",
+ "typeid",
 ]
 
 [[package]]
@@ -1113,19 +1086,19 @@ name = "faas-benchmark"
 version = "0.0.1"
 dependencies = [
  "clap 4.4.18",
- "dslab-core",
  "dslab-faas",
  "itertools 0.10.5",
+ "simcore",
 ]
 
 [[package]]
 name = "faas-example"
 version = "0.0.1"
 dependencies = [
- "dslab-core",
  "dslab-faas",
  "env_logger 0.9.3",
  "log 0.4.20",
+ "simcore",
 ]
 
 [[package]]
@@ -1151,10 +1124,10 @@ dependencies = [
 name = "faas-synthetic-trace-example"
 version = "0.1.0"
 dependencies = [
- "dslab-core",
  "dslab-faas",
  "rand_distr",
  "rand_pcg 0.3.1",
+ "simcore",
 ]
 
 [[package]]
@@ -1781,11 +1754,11 @@ name = "iaas-benchmark"
 version = "0.1.0"
 dependencies = [
  "clap 3.2.25",
- "dslab-core",
  "dslab-iaas",
  "env_logger 0.8.4",
  "log 0.4.20",
  "rand 0.8.5",
+ "simcore",
  "sugars",
 ]
 
@@ -1794,11 +1767,11 @@ name = "iaas-example"
 version = "0.1.0"
 dependencies = [
  "clap 3.2.25",
- "dslab-core",
  "dslab-iaas",
  "env_logger 0.8.4",
  "log 0.4.20",
  "rand 0.8.5",
+ "simcore",
  "sugars",
 ]
 
@@ -1808,13 +1781,13 @@ version = "0.1.0"
 dependencies = [
  "clap 3.2.25",
  "csv",
- "dslab-core",
  "dslab-iaas",
  "env_logger 0.8.4",
  "indexmap 1.9.3",
  "log 0.4.20",
  "rand 0.8.5",
  "serde",
+ "simcore",
  "sugars",
 ]
 
@@ -1824,12 +1797,12 @@ version = "0.1.0"
 dependencies = [
  "clap 3.2.25",
  "csv",
- "dslab-core",
  "dslab-iaas",
  "env_logger 0.8.4",
  "log 0.4.20",
  "rand 0.8.5",
  "serde",
+ "simcore",
  "sugars",
 ]
 
@@ -2121,7 +2094,6 @@ version = "0.1.0"
 dependencies = [
  "clap 3.2.25",
  "dslab-compute",
- "dslab-core",
  "dslab-network",
  "dslab-storage",
  "env_logger 0.9.3",
@@ -2130,6 +2102,7 @@ dependencies = [
  "rand 0.8.5",
  "rand_pcg 0.3.1",
  "serde",
+ "simcore",
  "sugars",
 ]
 
@@ -2139,7 +2112,6 @@ version = "0.1.0"
 dependencies = [
  "clap 3.2.25",
  "dslab-compute",
- "dslab-core",
  "dslab-network",
  "dslab-storage",
  "env_logger 0.9.3",
@@ -2149,6 +2121,7 @@ dependencies = [
  "rand 0.8.5",
  "rand_pcg 0.3.1",
  "serde",
+ "simcore",
  "sugars",
 ]
 
@@ -2364,10 +2337,10 @@ name = "network-simple"
 version = "0.1.0"
 dependencies = [
  "clap 4.4.18",
- "dslab-core",
  "dslab-network",
  "env_logger 0.10.2",
  "log 0.4.20",
+ "simcore",
  "sugars",
 ]
 
@@ -2376,11 +2349,11 @@ name = "network-topology-benchmark"
 version = "0.1.0"
 dependencies = [
  "clap 4.4.18",
- "dslab-core",
  "dslab-network",
  "env_logger 0.10.2",
  "log 0.4.20",
  "serde",
+ "simcore",
  "sugars",
 ]
 
@@ -2388,10 +2361,10 @@ dependencies = [
 name = "network-topology-example"
 version = "0.1.0"
 dependencies = [
- "dslab-core",
  "dslab-network",
  "env_logger 0.10.2",
  "log 0.4.20",
+ "simcore",
  "sugars",
 ]
 
@@ -2829,11 +2802,11 @@ name = "ping-pong"
 version = "0.1.0"
 dependencies = [
  "clap 3.2.25",
- "dslab-core",
  "dslab-network",
  "env_logger 0.9.3",
  "log 0.4.20",
  "serde",
+ "simcore",
  "sugars",
 ]
 
@@ -2842,12 +2815,12 @@ name = "ping-pong-async"
 version = "0.1.0"
 dependencies = [
  "clap 3.2.25",
- "dslab-core",
  "dslab-network",
  "env_logger 0.9.3",
  "futures",
  "log 0.4.20",
  "serde",
+ "simcore",
  "sugars",
 ]
 
@@ -2978,18 +2951,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2422ad645d89c99f8f3e6b88a9fdeca7fabeac836b1002371c4367c8f984aae"
 dependencies = [
  "unicode-ident",
-]
-
-[[package]]
-name = "profiling"
-version = "0.1.0"
-dependencies = [
- "clap 3.2.25",
- "dslab-core",
- "env_logger 0.9.3",
- "log 0.4.20",
- "serde",
- "sugars",
 ]
 
 [[package]]
@@ -3665,6 +3626,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ae1a47186c03a32177042e55dbc5fd5aee900b8e0069a8d70fba96a9375cd012"
 
 [[package]]
+name = "simcore"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a20dfec85e94e569fa5b810b2d992c68b361f31bfba471447427536488c9c292"
+dependencies = [
+ "colored",
+ "downcast-rs",
+ "dyn-clone",
+ "erased-serde",
+ "futures",
+ "log 0.4.20",
+ "rand 0.8.5",
+ "rand_pcg 0.3.1",
+ "rustc-hash 2.0.0",
+ "serde",
+ "serde_json",
+ "serde_type_name",
+]
+
+[[package]]
 name = "simd-adler32"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3783,13 +3764,13 @@ checksum = "213701ba3370744dcd1a12960caa4843b3d68b4d1c0a5d575e0d65b2ee9d16c0"
 name = "storage-disk-advanced-example"
 version = "0.1.0"
 dependencies = [
- "dslab-core",
  "dslab-models",
  "dslab-storage",
  "env_logger 0.10.2",
  "log 0.4.20",
  "rand 0.8.5",
  "serde",
+ "simcore",
  "sugars",
 ]
 
@@ -3798,11 +3779,11 @@ name = "storage-disk-benchmark"
 version = "0.1.0"
 dependencies = [
  "clap 3.2.25",
- "dslab-core",
  "dslab-storage",
  "env_logger 0.9.3",
  "log 0.4.20",
  "serde",
+ "simcore",
  "sugars",
 ]
 
@@ -3810,11 +3791,11 @@ dependencies = [
 name = "storage-disk-example"
 version = "0.1.0"
 dependencies = [
- "dslab-core",
  "dslab-storage",
  "env_logger 0.10.2",
  "log 0.4.20",
  "serde",
+ "simcore",
  "sugars",
 ]
 
@@ -3822,11 +3803,11 @@ dependencies = [
 name = "storage-fs-example"
 version = "0.1.0"
 dependencies = [
- "dslab-core",
  "dslab-storage",
  "env_logger 0.9.3",
  "log 0.4.20",
  "serde",
+ "simcore",
  "sugars",
 ]
 
@@ -4018,11 +3999,11 @@ dependencies = [
 name = "throughput-model-comparison"
 version = "0.1.0"
 dependencies = [
- "dslab-core",
  "dslab-models",
  "num 0.4.1",
  "rand 0.8.5",
  "rand_pcg 0.3.1",
+ "simcore",
  "sugars",
 ]
 
@@ -4182,6 +4163,12 @@ checksum = "b6d3364c5e96cb2ad1603037ab253ddd34d7fb72a58bdddf4b7350760fc69a46"
 dependencies = [
  "rustc-hash 1.1.0",
 ]
+
+[[package]]
+name = "typeid"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "059d83cc991e7a42fc37bd50941885db0888e34209f8cfd9aab07ddec03bc9cf"
 
 [[package]]
 name = "unic-bidi"

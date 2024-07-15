@@ -2,11 +2,11 @@
 
 use serde::Serialize;
 
-use dslab_core::cast;
-use dslab_core::component::Id;
-use dslab_core::context::SimulationContext;
-use dslab_core::event::Event;
-use dslab_core::handler::EventHandler;
+use simcore::cast;
+use simcore::component::Id;
+use simcore::context::SimulationContext;
+use simcore::event::Event;
+use simcore::handler::EventHandler;
 
 use dslab_models::throughput_sharing::{FairThroughputSharingModel, ThroughputSharingModel};
 

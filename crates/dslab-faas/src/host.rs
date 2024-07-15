@@ -8,10 +8,10 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use dslab_core::cast;
-use dslab_core::context::SimulationContext;
-use dslab_core::event::Event;
-use dslab_core::handler::EventHandler;
+use simcore::cast;
+use simcore::context::SimulationContext;
+use simcore::event::Event;
+use simcore::handler::EventHandler;
 
 use crate::coldstart::{ColdStartPolicy, KeepaliveDecision};
 use crate::container::{ContainerManager, ContainerStatus};

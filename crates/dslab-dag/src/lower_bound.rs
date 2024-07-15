@@ -1,4 +1,4 @@
-use dslab_core::component::Id;
+use simcore::component::Id;
 
 use crate::dag::DAG;
 use crate::dag_stats::DagStats;

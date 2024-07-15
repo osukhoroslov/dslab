@@ -1,6 +1,6 @@
 //! Network model without congestion where each transfer gets the full bandwidth.
 
-use dslab_core::context::SimulationContext;
+use simcore::context::SimulationContext;
 
 use crate::{DataTransfer, DataTransferCompleted, NetworkModel, NodeId};
 

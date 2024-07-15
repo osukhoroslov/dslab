@@ -2,10 +2,10 @@ use std::time::Instant;
 
 use clap::Parser;
 
-use dslab_core::log_info;
-use dslab_core::simulation::Simulation;
 use dslab_iaas::core::config::sim_config::SimulationConfig;
 use dslab_iaas::simulation::CloudSimulation;
+use simcore::log_info;
+use simcore::simulation::Simulation;
 
 fn init_logger() {
     use env_logger::Builder;

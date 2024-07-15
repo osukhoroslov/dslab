@@ -12,11 +12,11 @@ use crate::core::monitoring::Monitoring;
 use crate::core::vm::VmStatus;
 use crate::core::vm_api::VmAPI;
 use crate::custom_component::CustomComponent;
-use dslab_core::cast;
-use dslab_core::context::SimulationContext;
-use dslab_core::event::Event;
-use dslab_core::handler::EventHandler;
-use dslab_core::{log_debug, log_info, log_trace, log_warn};
+use simcore::cast;
+use simcore::context::SimulationContext;
+use simcore::event::Event;
+use simcore::handler::EventHandler;
+use simcore::{log_debug, log_info, log_trace, log_warn};
 
 #[derive(Clone, Serialize)]
 pub struct PerformMigrations {}

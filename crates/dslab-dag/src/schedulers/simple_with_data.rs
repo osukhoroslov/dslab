@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use dslab_core::component::Id;
-use dslab_core::context::SimulationContext;
+use simcore::component::Id;
+use simcore::context::SimulationContext;
 
 use crate::dag::DAG;
 use crate::data_item::DataTransferMode;

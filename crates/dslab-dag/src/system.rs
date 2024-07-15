@@ -1,7 +1,7 @@
 //! Distributed computing system.
 
-use dslab_core::component::Id;
 use dslab_network::Network;
+use simcore::component::Id;
 
 use crate::data_item::DataTransferMode;
 use crate::resource::Resource;

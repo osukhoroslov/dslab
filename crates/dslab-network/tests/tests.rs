@@ -4,13 +4,13 @@ use std::rc::Rc;
 use rstest::rstest;
 use serde::Serialize;
 
-use dslab_core::cast;
-use dslab_core::component::Id;
-use dslab_core::context::SimulationContext;
-use dslab_core::event::Event;
-use dslab_core::handler::EventHandler;
-use dslab_core::simulation::Simulation;
-use dslab_core::EPSILON;
+use simcore::cast;
+use simcore::component::Id;
+use simcore::context::SimulationContext;
+use simcore::event::Event;
+use simcore::handler::EventHandler;
+use simcore::simulation::Simulation;
+use simcore::EPSILON;
 
 use dslab_network::models::{ConstantBandwidthNetworkModel, TopologyAwareNetworkModel};
 use dslab_network::routing::{RoutingAlgorithm, ShortestPathDijkstra, ShortestPathFloydWarshall};

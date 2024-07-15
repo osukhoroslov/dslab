@@ -6,7 +6,7 @@ use clap::Parser;
 use env_logger::Builder;
 use sugars::{boxed, rc, refcell};
 
-use dslab_core::{cast, log_info, Event, EventHandler, Id, Simulation, SimulationContext};
+use simcore::{cast, log_info, Event, EventHandler, Id, Simulation, SimulationContext};
 
 use dslab_network::models::{ConstantBandwidthNetworkModel, SharedBandwidthNetworkModel};
 use dslab_network::{DataTransferCompleted, MessageDelivered, Network};

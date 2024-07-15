@@ -3,10 +3,10 @@ use std::rc::Rc;
 
 use serde::Serialize;
 
-use dslab_core::cast;
-use dslab_core::event::EventData;
-use dslab_core::{Event, Id, SimulationContext, StaticEventHandler};
 use dslab_network::Network;
+use simcore::cast;
+use simcore::event::EventData;
+use simcore::{Event, Id, SimulationContext, StaticEventHandler};
 
 #[derive(Clone, Serialize)]
 pub struct Start {}

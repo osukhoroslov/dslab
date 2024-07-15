@@ -2,8 +2,8 @@
 
 use std::collections::{HashMap, VecDeque};
 
-use dslab_core::SimulationContext;
 use dslab_models::throughput_sharing::{FairThroughputSharingModel, ThroughputSharingModel};
+use simcore::SimulationContext;
 
 use crate::disk::{DiskOperation, DiskOperationCompleted, DiskOperationType};
 

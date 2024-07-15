@@ -1,6 +1,5 @@
 use std::boxed::Box;
 
-use dslab_core::simulation::Simulation;
 use dslab_faas::coldstart::FixedTimeColdStartPolicy;
 use dslab_faas::config::Config;
 use dslab_faas::cpu::IgnoredCpuPolicy;
@@ -8,6 +7,7 @@ use dslab_faas::function::Application;
 use dslab_faas::invocation::InvocationStatus;
 use dslab_faas::resource::{ResourceConsumer, ResourceProvider};
 use dslab_faas::simulation::ServerlessSimulation;
+use simcore::simulation::Simulation;
 
 #[test]
 fn test_invocation_lifecycle() {

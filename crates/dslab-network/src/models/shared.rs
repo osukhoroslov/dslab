@@ -1,7 +1,7 @@
 //! Network model where the bandwidth is shared fairly among all current transfers.
 
-use dslab_core::context::SimulationContext;
 use dslab_models::throughput_sharing::{FairThroughputSharingModel, ThroughputSharingModel};
+use simcore::context::SimulationContext;
 
 use crate::{DataTransfer, DataTransferCompleted, NetworkModel, NodeId};
 

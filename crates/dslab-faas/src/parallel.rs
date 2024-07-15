@@ -10,7 +10,7 @@ use std::sync::{mpsc::channel, Arc};
 use itertools::izip;
 use threadpool::ThreadPool;
 
-use dslab_core::simulation::Simulation;
+use simcore::simulation::Simulation;
 
 use crate::coldstart::{ColdStartPolicy, FixedTimeColdStartPolicy};
 use crate::config::{Config, ConfigParamResolvers, RawConfig};

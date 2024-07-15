@@ -4,7 +4,7 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
-use dslab_core::cast;
+use simcore::cast;
 
 use crate::events::{MessageReceived, TimerFired};
 use crate::logger::LogEntry;

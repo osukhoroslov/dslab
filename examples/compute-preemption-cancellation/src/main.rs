@@ -7,7 +7,7 @@ use rand_pcg::Pcg64;
 use sugars::{rc, refcell};
 
 use dslab_compute::multicore::*;
-use dslab_core::simulation::Simulation;
+use simcore::simulation::Simulation;
 
 mod worker;
 use crate::worker::{TaskRequest, Worker};

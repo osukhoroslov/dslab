@@ -4,8 +4,8 @@ use std::fs::File;
 use log::Level;
 use serde::Serialize;
 
-use dslab_core::SimulationContext;
-use dslab_core::{log_debug, log_error, log_info, log_trace, log_warn};
+use simcore::SimulationContext;
+use simcore::{log_debug, log_error, log_info, log_trace, log_warn};
 
 pub trait Logger {
     fn log_error(&mut self, ctx: &SimulationContext, log: String);

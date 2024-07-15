@@ -6,7 +6,7 @@ use std::rc::Rc;
 
 use serde::{Deserialize, Serialize};
 
-use dslab_core::component::Id;
+use simcore::component::Id;
 
 use dslab_compute::multicore::*;
 

@@ -3,8 +3,8 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use dslab_core::context::SimulationContext;
-use dslab_core::event::EventId;
+use simcore::context::SimulationContext;
+use simcore::event::EventId;
 
 use crate::event::ContainerStartEvent;
 use crate::function::Application;

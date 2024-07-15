@@ -4,8 +4,8 @@ use std::str::FromStr;
 
 use serde::Deserialize;
 
-use dslab_core::component::Id;
 use dslab_network::Network;
+use simcore::component::Id;
 
 /// Represents a data item state.
 #[derive(Eq, PartialEq, Clone)]

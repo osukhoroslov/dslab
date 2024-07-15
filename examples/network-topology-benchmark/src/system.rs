@@ -4,8 +4,8 @@ use std::rc::Rc;
 use serde::Serialize;
 use sugars::{rc, refcell};
 
-use dslab_core::{cast, log_debug, Event, EventHandler, Id, Simulation, SimulationContext};
 use dslab_network::{DataTransferCompleted, MessageDelivered, Network};
+use simcore::{cast, log_debug, Event, EventHandler, Id, Simulation, SimulationContext};
 
 #[derive(Debug, Default)]
 pub struct System {

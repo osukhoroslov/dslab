@@ -1,7 +1,6 @@
 use clap::Parser;
 use log::info;
 
-use dslab_core::simulation::Simulation;
 use dslab_iaas::core::config::sim_config::SimulationConfig;
 use dslab_iaas::core::load_model::LoadModel;
 use dslab_iaas::core::vm::ResourceConsumer;
@@ -11,6 +10,7 @@ use dslab_iaas::custom_component::CustomComponent;
 use dslab_iaas::extensions::standard_dataset_reader::StandardDatasetReader;
 use dslab_iaas::extensions::vm_migrator::VmMigrator;
 use dslab_iaas::simulation::CloudSimulation;
+use simcore::simulation::Simulation;
 
 fn init_logger() {
     use env_logger::Builder;

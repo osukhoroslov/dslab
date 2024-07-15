@@ -2,10 +2,10 @@ use std::io::Write;
 
 use env_logger::Builder;
 
-use dslab_core::simulation::Simulation;
 use dslab_faas::function::Application;
 use dslab_faas::resource::{ResourceConsumer, ResourceProvider};
 use dslab_faas::simulation::ServerlessSimulation;
+use simcore::simulation::Simulation;
 
 fn main() {
     Builder::from_default_env()

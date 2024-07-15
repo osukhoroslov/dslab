@@ -2,7 +2,6 @@ use std::boxed::Box;
 
 use rand_distr::{Exp, LogNormal};
 
-use dslab_core::simulation::Simulation;
 use dslab_faas::coldstart::FixedTimeColdStartPolicy;
 use dslab_faas::config::{Config, HostConfig};
 use dslab_faas::extra::synthetic_trace::{
@@ -10,6 +9,7 @@ use dslab_faas::extra::synthetic_trace::{
     SyntheticTraceConfig,
 };
 use dslab_faas::simulation::ServerlessSimulation;
+use simcore::simulation::Simulation;
 
 fn main() {
     let apps = vec![

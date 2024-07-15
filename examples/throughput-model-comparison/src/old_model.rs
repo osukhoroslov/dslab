@@ -3,8 +3,8 @@ use std::collections::BinaryHeap;
 
 use sugars::boxed;
 
-use dslab_core::SimulationContext;
 use dslab_models::throughput_sharing::{ActivityId, ThroughputSharingModel};
+use simcore::SimulationContext;
 
 struct Activity<T> {
     position: f64,

@@ -1,4 +1,4 @@
-use dslab_core::simulation::Simulation;
+use simcore::simulation::Simulation;
 
 use dslab_iaas::core::config::sim_config::SimulationConfig;
 use dslab_iaas::core::vm::ResourceConsumer;

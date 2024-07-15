@@ -1,9 +1,9 @@
 use std::collections::{BTreeSet, HashMap};
 use std::str::FromStr;
 
-use dslab_core::context::SimulationContext;
-use dslab_core::log_warn;
-use dslab_core::Id;
+use simcore::context::SimulationContext;
+use simcore::log_warn;
+use simcore::Id;
 
 use crate::dag::DAG;
 use crate::data_item::{DataTransferMode, DataTransferStrategy};

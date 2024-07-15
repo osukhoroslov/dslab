@@ -10,7 +10,7 @@ use env_logger::Builder;
 use sugars::{rc, refcell};
 
 use dslab_compute::multicore::Compute;
-use dslab_core::simulation::Simulation;
+use simcore::simulation::Simulation;
 
 use crate::client::Client;
 use crate::events::Start;

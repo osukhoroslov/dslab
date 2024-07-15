@@ -1,10 +1,10 @@
 mod common;
 use common::assert_float_eq;
 
-use dslab_core::simulation::Simulation;
 use dslab_faas::function::Application;
 use dslab_faas::resource::{ResourceConsumer, ResourceProvider};
 use dslab_faas::simulation::ServerlessSimulation;
+use simcore::simulation::Simulation;
 
 #[test]
 fn test_concurrency() {

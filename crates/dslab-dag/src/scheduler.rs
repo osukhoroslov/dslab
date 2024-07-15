@@ -7,8 +7,8 @@ use std::str::FromStr;
 use indexmap::map::IndexMap;
 use itertools::Itertools;
 
-use dslab_core::component::Id;
-use dslab_core::context::SimulationContext;
+use simcore::component::Id;
+use simcore::context::SimulationContext;
 
 use crate::dag::DAG;
 use crate::runner::Config;

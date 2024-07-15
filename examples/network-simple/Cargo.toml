@@ -5,7 +5,7 @@ license = "MIT OR Apache-2.0"
 edition = "2021"
 
 [dependencies]
-dslab-core = { path = "../../crates/dslab-core" }
+simcore = "0.1"
 dslab-network = { path = "../../crates/dslab-network" }
 clap = { version = "4.1.9", features = ["derive"] }
 env_logger = "0.10.0"

@@ -3,9 +3,9 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use dslab_core::SimulationContext;
 use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg64;
+use simcore::SimulationContext;
 
 use crate::message::Message;
 use crate::node::{ProcessEvent, TimerBehavior};

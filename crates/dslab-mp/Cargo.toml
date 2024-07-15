@@ -5,7 +5,7 @@ license = "MIT OR Apache-2.0"
 edition = "2021"
 
 [dependencies]
-dslab-core = { path = "../dslab-core" }
+simcore = "0.1"
 colored = "2.0.0"
 downcast-rs = "1.2.0"
 dyn-clone = "1.0"
