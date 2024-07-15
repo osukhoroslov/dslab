@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":["Event","TypedEvent"],"trait":["EventData"],"type":["EventId"]};

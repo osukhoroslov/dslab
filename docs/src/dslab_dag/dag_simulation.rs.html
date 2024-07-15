@@ -166,7 +166,7 @@
 <span class="kw">use </span>std::rc::Rc;
 
 <span class="kw">use </span>dslab_compute::multicore::{Compute, CoresDependency};
-<span class="kw">use </span>dslab_core::simulation::Simulation;
+<span class="kw">use </span>simcore::simulation::Simulation;
 
 <span class="kw">use </span><span class="kw">crate</span>::dag::DAG;
 <span class="kw">use </span><span class="kw">crate</span>::network::NetworkConfig;
@@ -263,35 +263,35 @@
 
     <span class="doccomment">/// Performs the specified number of steps through the simulation.
     ///
-    /// See [Simulation::steps()](dslab_core::simulation::Simulation::steps).
+    /// See [Simulation::steps()](simcore::simulation::Simulation::steps).
     </span><span class="kw">pub fn </span>steps(<span class="kw-2">&amp;mut </span><span class="self">self</span>, step_count: u64) -&gt; bool {
         <span class="self">self</span>.sim.steps(step_count)
     }
 
     <span class="doccomment">/// Steps through the simulation with duration limit.
     ///
-    /// See [Simulation::step_for_duration()](dslab_core::simulation::Simulation::step_for_duration).
+    /// See [Simulation::step_for_duration()](simcore::simulation::Simulation::step_for_duration).
     </span><span class="kw">pub fn </span>step_for_duration(<span class="kw-2">&amp;mut </span><span class="self">self</span>, time: f64) {
         <span class="self">self</span>.sim.step_for_duration(time);
     }
 
     <span class="doccomment">/// Steps through the simulation until there are no pending events left.
     ///
-    /// See [Simulation::step_until_no_events()](dslab_core::simulation::Simulation::step_until_no_events).
+    /// See [Simulation::step_until_no_events()](simcore::simulation::Simulation::step_until_no_events).
     </span><span class="kw">pub fn </span>step_until_no_events(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="self">self</span>.sim.step_until_no_events();
     }
 
     <span class="doccomment">/// Returns the total number of created events.
     ///
-    /// See [Simulation::event_count()](dslab_core::simulation::Simulation::event_count).
+    /// See [Simulation::event_count()](simcore::simulation::Simulation::event_count).
     </span><span class="kw">pub fn </span>event_count(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
         <span class="self">self</span>.sim.event_count()
     }
 
     <span class="doccomment">/// Returns the current simulation time.
     ///
-    /// See [Simulation::time()](dslab_core::simulation::Simulation::time).
+    /// See [Simulation::time()](simcore::simulation::Simulation::time).
     </span><span class="kw">pub fn </span>time(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; f64 {
         <span class="self">self</span>.sim.time()
     }

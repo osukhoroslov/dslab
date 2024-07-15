@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["event_future","queue","timer_future"]};

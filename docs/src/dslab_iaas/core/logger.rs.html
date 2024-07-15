@@ -135,8 +135,8 @@
 <span class="kw">use </span>log::Level;
 <span class="kw">use </span>serde::Serialize;
 
-<span class="kw">use </span>dslab_core::SimulationContext;
-<span class="kw">use </span>dslab_core::{log_debug, log_error, log_info, log_trace, log_warn};
+<span class="kw">use </span>simcore::SimulationContext;
+<span class="kw">use </span>simcore::{log_debug, log_error, log_info, log_trace, log_warn};
 
 <span class="kw">pub trait </span>Logger {
     <span class="kw">fn </span>log_error(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ctx: <span class="kw-2">&amp;</span>SimulationContext, log: String);

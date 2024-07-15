@@ -584,11 +584,11 @@
 
 <span class="kw">use </span>sugars::{rc, refcell};
 
-<span class="kw">use </span>dslab_core::context::SimulationContext;
-<span class="kw">use </span>dslab_core::simulation::Simulation;
-<span class="kw">use </span>dslab_core::Id;
 <span class="kw">use </span>dslab_models::power::cpu_models::linear::LinearCpuPowerModel;
 <span class="kw">use </span>dslab_models::power::host::{HostPowerModel, HostPowerModelBuilder};
+<span class="kw">use </span>simcore::context::SimulationContext;
+<span class="kw">use </span>simcore::simulation::Simulation;
+<span class="kw">use </span>simcore::Id;
 
 <span class="kw">use </span><span class="kw">crate</span>::core::config::sim_config::SimulationConfig;
 <span class="kw">use </span><span class="kw">crate</span>::core::events::allocation::{AllocationRequest, MigrationRequest};
@@ -1009,17 +1009,17 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>.ctx
     }
 
-    <span class="doccomment">/// Performs the specified number of steps through the simulation (see dslab-core docs).
+    <span class="doccomment">/// Performs the specified number of steps through the simulation (see simcore docs).
     </span><span class="kw">pub fn </span>steps(<span class="kw-2">&amp;mut </span><span class="self">self</span>, step_count: u64) -&gt; bool {
         <span class="self">self</span>.sim.steps(step_count)
     }
 
-    <span class="doccomment">/// Steps through the simulation with duration limit (see dslab-core docs).
+    <span class="doccomment">/// Steps through the simulation with duration limit (see simcore docs).
     </span><span class="kw">pub fn </span>step_for_duration(<span class="kw-2">&amp;mut </span><span class="self">self</span>, time: f64) {
         <span class="self">self</span>.sim.step_for_duration(time);
     }
 
-    <span class="doccomment">/// Steps through the simulation until the specified time (see dslab-core docs).
+    <span class="doccomment">/// Steps through the simulation until the specified time (see simcore docs).
     </span><span class="kw">pub fn </span>step_until_time(<span class="kw-2">&amp;mut </span><span class="self">self</span>, time: f64) {
         <span class="self">self</span>.sim.step_until_time(time);
     }

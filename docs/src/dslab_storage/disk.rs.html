@@ -352,13 +352,13 @@
 </span><span class="kw">use </span>serde::Serialize;
 <span class="kw">use </span>sugars::boxed;
 
-<span class="kw">use </span>dslab_core::component::Id;
-<span class="kw">use </span>dslab_core::event::Event;
-<span class="kw">use </span>dslab_core::handler::EventHandler;
-<span class="kw">use </span>dslab_core::{cast, context::SimulationContext, log_debug, log_error};
 <span class="kw">use </span>dslab_models::throughput_sharing::{
     make_constant_throughput_fn, ActivityFactorFn, ConstantFactorFn, FairThroughputSharingModel, ResourceThroughputFn,
 };
+<span class="kw">use </span>simcore::component::Id;
+<span class="kw">use </span>simcore::event::Event;
+<span class="kw">use </span>simcore::handler::EventHandler;
+<span class="kw">use </span>simcore::{cast, context::SimulationContext, log_debug, log_error};
 
 <span class="kw">use </span><span class="kw">crate</span>::events::{DataReadCompleted, DataReadFailed, DataWriteCompleted, DataWriteFailed};
 <span class="kw">use </span><span class="kw">crate</span>::scheduler::{FifoScheduler, Scheduler};

@@ -739,13 +739,13 @@
 <span class="kw">use </span>strum::IntoEnumIterator;
 
 <span class="kw">use </span>dslab_compute::multicore::<span class="kw-2">*</span>;
-<span class="kw">use </span>dslab_core::cast;
-<span class="kw">use </span>dslab_core::component::Id;
-<span class="kw">use </span>dslab_core::context::SimulationContext;
-<span class="kw">use </span>dslab_core::event::Event;
-<span class="kw">use </span>dslab_core::handler::EventHandler;
-<span class="kw">use </span>dslab_core::{log_debug, log_error, log_info};
 <span class="kw">use </span>dslab_network::{DataTransferCompleted, Network};
+<span class="kw">use </span>simcore::cast;
+<span class="kw">use </span>simcore::component::Id;
+<span class="kw">use </span>simcore::context::SimulationContext;
+<span class="kw">use </span>simcore::event::Event;
+<span class="kw">use </span>simcore::handler::EventHandler;
+<span class="kw">use </span>simcore::{log_debug, log_error, log_info};
 
 <span class="kw">use </span><span class="kw">crate</span>::dag::DAG;
 <span class="kw">use </span><span class="kw">crate</span>::data_item::{DataItemState, DataTransferMode};

@@ -56,8 +56,8 @@
 <a href="#56" id="56">56</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Network model where the bandwidth is shared fairly among all current transfers.
 
-</span><span class="kw">use </span>dslab_core::context::SimulationContext;
-<span class="kw">use </span>dslab_models::throughput_sharing::{FairThroughputSharingModel, ThroughputSharingModel};
+</span><span class="kw">use </span>dslab_models::throughput_sharing::{FairThroughputSharingModel, ThroughputSharingModel};
+<span class="kw">use </span>simcore::context::SimulationContext;
 
 <span class="kw">use crate</span>::{DataTransfer, DataTransferCompleted, NetworkModel, NodeId};
 

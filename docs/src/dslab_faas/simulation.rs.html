@@ -301,8 +301,8 @@
 <span class="kw">use </span>std::ops::Range;
 <span class="kw">use </span>std::rc::Rc;
 
-<span class="kw">use </span>dslab_core::context::SimulationContext;
-<span class="kw">use </span>dslab_core::simulation::Simulation;
+<span class="kw">use </span>simcore::context::SimulationContext;
+<span class="kw">use </span>simcore::simulation::Simulation;
 
 <span class="kw">use </span><span class="kw">crate</span>::coldstart::ColdStartPolicy;
 <span class="kw">use </span><span class="kw">crate</span>::config::Config;
@@ -318,7 +318,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::trace::{RequestData, Trace};
 <span class="kw">use </span><span class="kw">crate</span>::util::Counter;
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>HandlerId = dslab_core::component::Id;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>HandlerId = simcore::component::Id;
 
 <span class="doccomment">/// Main FaaS simulation class.
 </span><span class="kw">pub struct </span>ServerlessSimulation {
