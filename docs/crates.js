@@ -1,1 +1,1 @@
-window.ALL_CRATES = ["dslab_compute","dslab_dag","dslab_faas","dslab_iaas","dslab_models","dslab_mp","dslab_mp_python","dslab_network","dslab_storage"];
+window.ALL_CRATES = ["dslab_compute","dslab_dag","dslab_faas","dslab_iaas","dslab_models","dslab_network","dslab_storage"];

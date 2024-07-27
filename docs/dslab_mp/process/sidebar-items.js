@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":["ProcessStateStub"],"trait":["Process","ProcessState"],"type":["StringProcessState"]};
