@@ -4,7 +4,7 @@
 //! - [Container manager](crate::container::ContainerManager) -- a component that manages running containers.
 //! - [CPU model](crate::cpu::Cpu) -- a component that models CPU sharing among running containers.
 //! - [Invoker] -- a component that routes invocation requests to appropriate containers and creates
-//! new containers if needed.
+//!   new containers if needed.
 use std::cell::RefCell;
 use std::rc::Rc;
 

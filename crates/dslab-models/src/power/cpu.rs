@@ -10,7 +10,7 @@ pub trait CpuPowerModel: DynClone {
     ///
     /// * CPU utilization is passed as a float in `[0, 1]` range (1 - maximum utilization).
     /// * (Optional) Relative CPU frequency is passed as a float in `[0, 1]` range,
-    /// where 0 corresponds to the minimum CPU frequency and 1 corresponds to the maximum CPU frequency.
+    ///   where 0 corresponds to the minimum CPU frequency and 1 corresponds to the maximum CPU frequency.
     /// * (Optional) CPU power management state is passed as a numerical index in `[0, num states)` range.
     fn get_power(&self, utilization: f64, frequency: Option<f64>, state: Option<usize>) -> f64;
 }

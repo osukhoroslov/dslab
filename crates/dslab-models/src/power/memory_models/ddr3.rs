@@ -8,6 +8,7 @@ use crate::power::memory::MemoryPowerModel;
 /// 1) Static power consumption (background power, 113.5 mW in the document) - 26% of maximum consumption
 /// 2) Activate consumption for every read and write action (activate power, 123.2 mW) - 28%
 /// 3) Read and write activities (RD/WR/Term power, 199.3 mW in paper) - 46%
+///
 /// In addition, we split the third part into two pieces - write (89.1 mW or 20%) and read (110.1 mW or 26%).
 ///
 /// Then we assume that a typical 8GB DDR3 module consumes 3 Watts of power:
