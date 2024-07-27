@@ -77,6 +77,7 @@
 <a href="#77" id="77">77</a>
 <a href="#78" id="78">78</a>
 <a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! DDR3 SDRAM power model.
 
 </span><span class="kw">use </span><span class="kw">crate</span>::power::memory::MemoryPowerModel;
@@ -87,6 +88,7 @@
 /// 1) Static power consumption (background power, 113.5 mW in the document) - 26% of maximum consumption
 /// 2) Activate consumption for every read and write action (activate power, 123.2 mW) - 28%
 /// 3) Read and write activities (RD/WR/Term power, 199.3 mW in paper) - 46%
+///
 /// In addition, we split the third part into two pieces - write (89.1 mW or 20%) and read (110.1 mW or 26%).
 ///
 /// Then we assume that a typical 8GB DDR3 module consumes 3 Watts of power:

@@ -28,7 +28,7 @@
     ///
     /// * CPU utilization is passed as a float in `[0, 1]` range (1 - maximum utilization).
     /// * (Optional) Relative CPU frequency is passed as a float in `[0, 1]` range,
-    /// where 0 corresponds to the minimum CPU frequency and 1 corresponds to the maximum CPU frequency.
+    ///   where 0 corresponds to the minimum CPU frequency and 1 corresponds to the maximum CPU frequency.
     /// * (Optional) CPU power management state is passed as a numerical index in `[0, num states)` range.
     </span><span class="kw">fn </span>get_power(<span class="kw-2">&amp;</span><span class="self">self</span>, utilization: f64, frequency: <span class="prelude-ty">Option</span>&lt;f64&gt;, state: <span class="prelude-ty">Option</span>&lt;usize&gt;) -&gt; f64;
 }
