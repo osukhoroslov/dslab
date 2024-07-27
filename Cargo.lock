@@ -109,15 +109,6 @@ checksum = "080e9890a082662b09c1ad45f567faeeb47f22b5fb23895fbe1e651e718e25ca"
 
 [[package]]
 name = "approx"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0e60b75072ecd4168020818c0107f2857bb6c4e64252d8d3983f6263b40a5c3"
-dependencies = [
- "num-traits",
-]
-
-[[package]]
-name = "approx"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cab112f0a86d568ea0e627cc1d6be74a1e9cd55214684db5561995f6dad897c6"
@@ -143,12 +134,6 @@ name = "arrayvec"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "23b62fc65de8e4e7f52534fb52b0f3ed04746ae267519eef2a83941e8085068b"
-
-[[package]]
-name = "assertables"
-version = "3.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d84b91d63c67e6c0b1a74728dad0057c4a6124b74e671ff91b7fe9f8bbd671aa"
 
 [[package]]
 name = "associative-cache"
@@ -705,18 +690,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "decorum"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "281759d3c8a14f5c3f0c49363be56810fcd7f910422f97f2db850c2920fde5cf"
-dependencies = [
- "approx 0.3.2",
- "num-traits",
- "serde",
- "serde_derive",
-]
-
-[[package]]
 name = "dirs-next"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -918,7 +891,7 @@ dependencies = [
 name = "dslab-models"
 version = "0.1.0"
 dependencies = [
- "approx 0.5.1",
+ "approx",
  "dyn-clone",
  "rand 0.8.5",
  "rustc-hash 2.0.0",
@@ -943,18 +916,6 @@ dependencies = [
  "serde",
  "serde_json",
  "simcore",
- "sugars",
-]
-
-[[package]]
-name = "dslab-mp-python"
-version = "0.1.0"
-dependencies = [
- "colored",
- "dslab-mp",
- "pyo3",
- "rstest",
- "serde",
  "sugars",
 ]
 
@@ -1875,12 +1836,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "indoc"
-version = "1.0.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfa799dd5ed20a7e349f3b4639aa80d74549c81716d9ec4f994c9b5815598306"
-
-[[package]]
 name = "instant"
 version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2046,16 +2001,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "01cda141df6706de531b6c46c3a33ecca755538219bd484262fa09410c13539c"
 
 [[package]]
-name = "lock_api"
-version = "0.4.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c168f8615b12bc01f9c17e2eb0cc07dcae1940121185446edc3744920e8ef45"
-dependencies = [
- "autocfg 1.1.0",
- "scopeguard",
-]
-
-[[package]]
 name = "log"
 version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2145,25 +2090,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "md5"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "490cc448043f947bae3cbee9c203358d62dbee0db12107a74be5c30ccfd09771"
-
-[[package]]
 name = "memchr"
 version = "2.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "523dc4f511e55ab87b694dc30d0f820d60906ef06413f93d4d7a1385599cc149"
-
-[[package]]
-name = "memoffset"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a634b1c61a95585bd15607c6ab0c4e5b226e695ff2800ba0cdccddf208c406c"
-dependencies = [
- "autocfg 1.1.0",
-]
 
 [[package]]
 name = "mime"
@@ -2197,122 +2127,6 @@ name = "more-asserts"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7843ec2de400bcbc6a6328c958dc38e5359da6e93e72e37bc5246bf1ae776389"
-
-[[package]]
-name = "mp-broadcast"
-version = "0.1.0"
-dependencies = [
- "clap 3.2.25",
- "dslab-mp",
- "dslab-mp-python",
- "env_logger 0.9.3",
- "log 0.4.20",
- "rand 0.8.5",
- "rand_pcg 0.3.1",
- "serde",
- "serde_json",
- "sugars",
-]
-
-[[package]]
-name = "mp-guarantees"
-version = "0.1.0"
-dependencies = [
- "assertables",
- "clap 3.2.25",
- "dslab-mp",
- "dslab-mp-python",
- "env_logger 0.9.3",
- "log 0.4.20",
- "rand 0.8.5",
- "rand_pcg 0.3.1",
- "sugars",
-]
-
-[[package]]
-name = "mp-kv-replication"
-version = "0.1.0"
-dependencies = [
- "assertables",
- "byteorder",
- "clap 3.2.25",
- "decorum",
- "dslab-mp",
- "dslab-mp-python",
- "env_logger 0.9.3",
- "log 0.4.20",
- "md5",
- "rand 0.8.5",
- "rand_pcg 0.3.1",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "mp-kv-replication-v2"
-version = "0.1.0"
-dependencies = [
- "assertables",
- "byteorder",
- "clap 3.2.25",
- "dslab-mp",
- "dslab-mp-python",
- "env_logger 0.9.3",
- "log 0.4.20",
- "md5",
- "rand 0.8.5",
- "rand_pcg 0.3.1",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "mp-kv-sharding"
-version = "0.1.0"
-dependencies = [
- "assertables",
- "clap 3.2.25",
- "decorum",
- "dslab-mp",
- "dslab-mp-python",
- "env_logger 0.9.3",
- "log 0.4.20",
- "rand 0.8.5",
- "rand_pcg 0.3.1",
- "serde",
- "serde_json",
- "sugars",
-]
-
-[[package]]
-name = "mp-membership"
-version = "0.1.0"
-dependencies = [
- "assertables",
- "clap 3.2.25",
- "dslab-mp",
- "dslab-mp-python",
- "env_logger 0.9.3",
- "log 0.4.20",
- "rand 0.8.5",
- "rand_pcg 0.3.1",
- "serde",
- "serde_json",
- "sugars",
-]
-
-[[package]]
-name = "mp-ping-pong"
-version = "0.1.0"
-dependencies = [
- "assertables",
- "clap 3.2.25",
- "dslab-mp",
- "dslab-mp-python",
- "env_logger 0.9.3",
- "log 0.4.20",
- "sugars",
-]
 
 [[package]]
 name = "native-tls"
@@ -2631,29 +2445,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "parking_lot"
-version = "0.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3742b2c103b9f06bc9fff0a37ff4912935851bee6d36f3c02bcc755bcfec228f"
-dependencies = [
- "lock_api",
- "parking_lot_core",
-]
-
-[[package]]
-name = "parking_lot_core"
-version = "0.9.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c42a9226546d68acdd9c0a280d17ce19bfe27a46bf68784e4066115788d008e"
-dependencies = [
- "cfg-if",
- "libc",
- "redox_syscall",
- "smallvec",
- "windows-targets 0.48.5",
-]
-
-[[package]]
 name = "pathfinder_geometry"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2958,66 +2749,6 @@ name = "puruspe"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fe7765e19fb2ba6fd4373b8d90399f5321683ea7c11b598c6bbaa3a72e9c83b8"
-
-[[package]]
-name = "pyo3"
-version = "0.19.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e681a6cfdc4adcc93b4d3cf993749a4552018ee0a9b65fc0ccfad74352c72a38"
-dependencies = [
- "cfg-if",
- "indoc",
- "libc",
- "memoffset",
- "parking_lot",
- "pyo3-build-config",
- "pyo3-ffi",
- "pyo3-macros",
- "unindent",
-]
-
-[[package]]
-name = "pyo3-build-config"
-version = "0.19.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "076c73d0bc438f7a4ef6fdd0c3bb4732149136abd952b110ac93e4edb13a6ba5"
-dependencies = [
- "once_cell",
- "target-lexicon",
-]
-
-[[package]]
-name = "pyo3-ffi"
-version = "0.19.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e53cee42e77ebe256066ba8aa77eff722b3bb91f3419177cf4cd0f304d3284d9"
-dependencies = [
- "libc",
- "pyo3-build-config",
-]
-
-[[package]]
-name = "pyo3-macros"
-version = "0.19.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dfeb4c99597e136528c6dd7d5e3de5434d1ceaf487436a3f03b2d56b6fc9efd1"
-dependencies = [
- "proc-macro2",
- "pyo3-macros-backend",
- "quote",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "pyo3-macros-backend"
-version = "0.19.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "947dc12175c254889edc0c02e399476c2f652b4b9ebd123aa655c224de259536"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 1.0.109",
-]
 
 [[package]]
 name = "quote"
@@ -3925,12 +3656,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "target-lexicon"
-version = "0.12.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "69758bda2e78f098e4ccb393021a0963bb3442eac05f135c30f61b7370bbafae"
-
-[[package]]
 name = "tempfile"
 version = "3.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4265,12 +3990,6 @@ name = "unicode-segmentation"
 version = "1.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1dd624098567895118886609431a7c3b8f516e41d30e0643f03d94592a147e36"
-
-[[package]]
-name = "unindent"
-version = "0.1.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e1766d682d402817b5ac4490b3c3002d91dfa0d22812f341609f97b08757359c"
 
 [[package]]
 name = "url"
