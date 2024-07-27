@@ -1,6 +1,6 @@
 [workspace]
 members = ["crates/*", "examples/*", "tools/*"]
-exclude = ["crates/dslab-mp"]
+exclude = ["crates/dslab-core", "crates/dslab-mp"]
 resolver = "2"
 
 [profile.release-debug]
