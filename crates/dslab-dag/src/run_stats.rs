@@ -140,7 +140,7 @@ impl RunStats {
         self.total_execution_cost = 0.;
         for (resource, start) in self.resource_first_used.iter() {
             let duration = self.resource_last_used.get(resource).unwrap() - *start;
-            let n_intervals = (duration - 1e-9).div_euclid(self.billing_interval) + 1.0;
+            let n_intervals = (duration / self.billing_interval).ceil();
             let current_cost = n_intervals * (*self.resource_price.get(resource).unwrap());
             self.total_execution_cost += current_cost;
         }

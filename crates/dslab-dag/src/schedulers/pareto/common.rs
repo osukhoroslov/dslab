@@ -240,7 +240,7 @@ impl<'a> PartialSchedule<'a> {
             return 0.;
         }
         let duration = self.resource_end[resource] - self.resource_start[resource];
-        let n_intervals = (duration - 1e-9).div_euclid(self.config.billing_interval) + 1.0;
+        let n_intervals = (duration / self.config.billing_interval).ceil();
         n_intervals * self.system.resources[resource].price
     }
 }
