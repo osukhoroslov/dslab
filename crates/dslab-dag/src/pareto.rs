@@ -89,16 +89,16 @@ impl ParetoSimulation {
         );
         let fake_runner_rc = fake_sim.init(self.dag.clone());
         let fake_runner = fake_runner_rc.borrow();
-        let fake_network = fake_runner.get_network();
+        let fake_network = fake_runner.network();
         let system = System {
-            resources: fake_runner.get_resources(),
+            resources: fake_runner.resources(),
             network: &fake_network.borrow(),
         };
         let start = Instant::now();
         let schedulers = self
             .scheduler
             .borrow_mut()
-            .find_pareto_front(fake_runner.get_dag(), system, config.clone(), fake_runner.get_context())
+            .find_pareto_front(fake_runner.dag(), system, config.clone(), fake_runner.context())
             .into_iter()
             .map(|x| Box::new(PredefinedActionsScheduler::new(x)))
             .collect::<Vec<_>>();

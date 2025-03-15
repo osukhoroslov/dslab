@@ -150,22 +150,22 @@ impl DAGRunner {
     }
 
     /// Returns DAG for this runner.
-    pub fn get_dag(&self) -> &DAG {
+    pub fn dag(&self) -> &DAG {
         &self.dag
     }
 
     /// Returns resources for this runner.
-    pub fn get_resources(&self) -> &Vec<Resource> {
+    pub fn resources(&self) -> &Vec<Resource> {
         &self.resources
     }
 
     /// Returns network for this runner.
-    pub fn get_network(&self) -> Rc<RefCell<Network>> {
+    pub fn network(&self) -> Rc<RefCell<Network>> {
         self.network.clone()
     }
 
     /// Returns simulation context for this runner.
-    pub fn get_context(&self) -> &SimulationContext {
+    pub fn context(&self) -> &SimulationContext {
         &self.ctx
     }
 

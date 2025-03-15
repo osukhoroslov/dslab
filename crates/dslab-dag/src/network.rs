@@ -49,7 +49,7 @@ pub enum NetworkConfig {
         /// Network latency in μs.
         latency: f64,
     },
-    TopologyAware {
+    BasicTopology {
         #[serde(rename = "topology")]
         topology_type: TopologyType,
         /// Links bandwidth in MB/s.
@@ -57,7 +57,7 @@ pub enum NetworkConfig {
         /// Links latency in μs.
         link_latency: f64,
     },
-    Custom {
+    CustomTopology {
         links: Vec<CustomLink>,
     },
 }
@@ -81,7 +81,7 @@ impl NetworkConfig {
     ///
     /// Bandwidth should be in MB/s, latency in μs.
     pub fn topology(topology_type: TopologyType, link_bandwidth: f64, link_latency: f64) -> Self {
-        NetworkConfig::TopologyAware {
+        NetworkConfig::BasicTopology {
             topology_type,
             link_bandwidth,
             link_latency,
@@ -90,7 +90,7 @@ impl NetworkConfig {
 
     /// Creates a more flexible network config with [`TopologyAwareNetworkModel`].
     pub fn custom(links: Vec<CustomLink>) -> Self {
-        NetworkConfig::Custom { links }
+        NetworkConfig::CustomTopology { links }
     }
 
     /// Creates network model based on stored parameters.
@@ -114,8 +114,8 @@ impl NetworkConfig {
                     ctx,
                 )
             }
-            NetworkConfig::TopologyAware { .. } => Network::new(Box::new(TopologyAwareNetworkModel::new()), ctx),
-            NetworkConfig::Custom { .. } => Network::new(Box::new(TopologyAwareNetworkModel::new()), ctx),
+            NetworkConfig::BasicTopology { .. } => Network::new(Box::new(TopologyAwareNetworkModel::new()), ctx),
+            NetworkConfig::CustomTopology { .. } => Network::new(Box::new(TopologyAwareNetworkModel::new()), ctx),
         }
     }
 
@@ -136,7 +136,7 @@ impl NetworkConfig {
         network.set_location(runner_id, "master");
 
         // Add links
-        if let NetworkConfig::TopologyAware {
+        if let NetworkConfig::BasicTopology {
             topology_type,
             link_bandwidth,
             link_latency,
@@ -168,7 +168,7 @@ impl NetworkConfig {
             network.init_topology();
         }
 
-        if let NetworkConfig::Custom { links } = self {
+        if let NetworkConfig::CustomTopology { links } = self {
             for link in links.iter() {
                 let link_latency = link.latency * 1e-6; // convert to seconds
                 if link.unidirectional {

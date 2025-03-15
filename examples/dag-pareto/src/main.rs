@@ -9,11 +9,11 @@ use dslab_dag::dag_simulation::DagSimulation;
 use dslab_dag::data_item::DataTransferMode;
 use dslab_dag::network::read_network_config;
 use dslab_dag::pareto::ParetoSimulation;
-use dslab_dag::pareto_schedulers::moheft::MOHeftScheduler;
 use dslab_dag::parsers::config::ParserConfig;
 use dslab_dag::resource::read_resource_configs;
 use dslab_dag::runner::Config;
 use dslab_dag::schedulers::heft::HeftScheduler;
+use dslab_dag::schedulers::pareto::moheft::MOHeftScheduler;
 
 #[derive(Parser, Debug)]
 #[command(about, long_about = None)]
@@ -52,7 +52,7 @@ fn main() {
     heft_sim.step_until_no_events();
     runner.borrow().validate_completed();
     println!(
-        "HEFT makespan = {:.3} cost = {:.3}",
+        "HEFT solution:\nmakespan = {:.3} cost = {:.3}\n",
         runner.borrow().run_stats().makespan,
         runner.borrow().run_stats().total_execution_cost
     );

@@ -8,7 +8,6 @@ pub mod experiment;
 pub mod lower_bound;
 pub mod network;
 pub mod pareto;
-pub mod pareto_schedulers;
 pub mod parsers;
 pub mod resource;
 pub mod run_stats;

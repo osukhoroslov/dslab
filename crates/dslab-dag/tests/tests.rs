@@ -445,7 +445,7 @@ fn test_shared_bandwidth() {
 }
 
 #[test]
-fn test_topology_star() {
+fn test_star_topology() {
     let modes = [DataTransferMode::Direct, DataTransferMode::ViaMasterNode];
     let values = [4., 5.];
     for (mode, expected) in modes.into_iter().zip(values.into_iter()) {
@@ -454,11 +454,11 @@ fn test_topology_star() {
         dag.add_task("1", 1., 1, 1, 1, CoresDependency::Linear);
         dag.add_task("2", 1., 1, 1, 1, CoresDependency::Linear);
         dag.add_task("3", 1., 1, 1, 1, CoresDependency::Linear);
-        let id0 = dag.add_task_output(0, "0", 1.);
-        dag.add_data_dependency(id0, 1);
-        dag.add_data_dependency(id0, 3);
-        let id1 = dag.add_task_output(2, "1", 1.);
-        dag.add_data_dependency(id1, 3);
+        let out0 = dag.add_task_output(0, "0", 1.);
+        let out1 = dag.add_task_output(1, "1", 1.);
+        dag.add_data_dependency(out0, 2);
+        dag.add_data_dependency(out0, 3);
+        dag.add_data_dependency(out1, 3);
         dag.add_resource_restriction(0, ResourceRestriction::Only(BTreeSet::from([0])));
         dag.add_resource_restriction(1, ResourceRestriction::Only(BTreeSet::from([1])));
         dag.add_resource_restriction(2, ResourceRestriction::Only(BTreeSet::from([2])));
@@ -491,10 +491,10 @@ fn test_resource_cost() {
     let mut dag = DAG::new();
     dag.add_task("0", 0.9, 1, 1, 1, CoresDependency::Linear);
     dag.add_task("1", 0.9, 1, 1, 1, CoresDependency::Linear);
-    let id = dag.add_task_output(0, "0", 0.3);
-    dag.add_data_dependency(id, 1);
     let input = dag.add_data_item("input", 0.);
+    let out0 = dag.add_task_output(0, "0", 0.3);
     dag.add_data_dependency(input, 0);
+    dag.add_data_dependency(out0, 1);
     dag.add_task_output(1, "output", 0.);
 
     dag.add_resource_restriction(0, ResourceRestriction::Only(BTreeSet::from([0])));
@@ -527,9 +527,11 @@ fn test_same_item_multiple_transfers() {
     dag.add_task("1", 3., 1, 1, 1, CoresDependency::Linear);
     dag.add_task("2", 1., 1, 1, 1, CoresDependency::Linear);
     dag.add_task("3", 1., 1, 1, 1, CoresDependency::Linear);
-    let id = dag.add_task_output(0, "0", 3.);
-    dag.add_data_dependency(id, 2);
-    dag.add_data_dependency(id, 3);
+    let out0 = dag.add_task_output(0, "0", 3.);
+    let out1 = dag.add_task_output(1, "1", 3.);
+    dag.add_data_dependency(out0, 2);
+    dag.add_data_dependency(out0, 3);
+    dag.add_data_dependency(out1, 3);
     dag.add_resource_restriction(0, ResourceRestriction::Only(BTreeSet::from([0])));
     dag.add_resource_restriction(1, ResourceRestriction::Only(BTreeSet::from([2])));
     dag.add_resource_restriction(2, ResourceRestriction::Only(BTreeSet::from([1])));

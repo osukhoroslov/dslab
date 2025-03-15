@@ -4,10 +4,10 @@ use simcore::log_warn;
 use crate::dag::DAG;
 use crate::data_item::{DataTransferMode, DataTransferStrategy};
 use crate::pareto::ParetoScheduler;
-use crate::pareto_schedulers::common::*;
 use crate::runner::Config;
 use crate::scheduler::{Action, SchedulerParams};
 use crate::schedulers::common::calc_ranks;
+use crate::schedulers::pareto::common::*;
 use crate::system::System;
 
 pub struct MOHeftScheduler {
