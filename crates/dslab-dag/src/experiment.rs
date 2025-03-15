@@ -42,6 +42,7 @@ struct ExperimentConfig {
     schedulers: Vec<String>,
     data_transfer_mode: DataTransferMode,
     traces_dir: Option<String>,
+    billing_interval: Option<f64>,
 }
 
 struct Run {
@@ -60,6 +61,7 @@ pub struct Experiment {
     data_transfer_mode: DataTransferMode,
     scheduler_resolver: fn(&SchedulerParams) -> Option<RcScheduler>,
     traces_dir: Option<String>,
+    billing_interval: Option<f64>,
 }
 
 impl Experiment {
@@ -71,6 +73,7 @@ impl Experiment {
         schedulers: Vec<SchedulerParams>,
         scheduler_resolver: fn(&SchedulerParams) -> Option<RcScheduler>,
         traces_dir: Option<String>,
+        billing_interval: Option<f64>,
     ) -> Self {
         let runs = dags
             .into_iter()
@@ -93,6 +96,7 @@ impl Experiment {
             data_transfer_mode,
             scheduler_resolver,
             traces_dir,
+            billing_interval,
         }
     }
 
@@ -171,6 +175,7 @@ impl Experiment {
             data_transfer_mode: config.data_transfer_mode,
             scheduler_resolver,
             traces_dir,
+            billing_interval: config.billing_interval,
         }
     }
 
@@ -201,6 +206,7 @@ impl Experiment {
                     scheduler,
                     Config {
                         data_transfer_mode: self.data_transfer_mode,
+                        billing_interval: self.billing_interval.unwrap_or(1.0),
                     },
                 );
 

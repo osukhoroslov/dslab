@@ -1,16 +1,17 @@
 use std::cell::RefCell;
+use std::collections::BTreeSet;
 use std::rc::Rc;
 
 use rand::prelude::*;
 use rand_pcg::Pcg64;
+use simcore::EPSILON;
 
 use dslab_compute::multicore::CoresDependency;
-use simcore::EPSILON;
 
 use dslab_dag::dag::DAG;
 use dslab_dag::dag_simulation::DagSimulation;
 use dslab_dag::data_item::DataTransferMode;
-use dslab_dag::network::NetworkConfig;
+use dslab_dag::network::{CustomLink, NetworkConfig, TopologyType};
 use dslab_dag::resource::ResourceConfig;
 use dslab_dag::runner::Config;
 use dslab_dag::scheduler::Scheduler;
@@ -19,6 +20,7 @@ use dslab_dag::schedulers::heft::HeftScheduler;
 use dslab_dag::schedulers::lookahead::LookaheadScheduler;
 use dslab_dag::schedulers::peft::PeftScheduler;
 use dslab_dag::schedulers::simple_scheduler::SimpleScheduler;
+use dslab_dag::task::ResourceRestriction;
 
 const PRECISION: f64 = 1. / ((1 << 20) as f64);
 
@@ -98,6 +100,7 @@ fn gen_resources(rng: &mut Pcg64, num_resources: usize, infinite_memory: bool) -
             } else {
                 rng.gen_range(32..1024)
             },
+            price: 0.0,
         })
         .collect()
 }
@@ -118,6 +121,7 @@ fn simple_test() {
         Rc::new(RefCell::new(SimpleScheduler::new())),
         Config {
             data_transfer_mode: DataTransferMode::Direct,
+            billing_interval: 1.0,
         },
     );
     let runner = sim.init(dag);
@@ -140,6 +144,7 @@ fn test_1() {
         Rc::new(RefCell::new(SimpleScheduler::new())),
         Config {
             data_transfer_mode: DataTransferMode::Direct,
+            billing_interval: 1.0,
         },
     );
     let runner = sim.init(dag);
@@ -162,6 +167,7 @@ fn test_2() {
         Rc::new(RefCell::new(HeftScheduler::new())),
         Config {
             data_transfer_mode: DataTransferMode::Direct,
+            billing_interval: 1.0,
         },
     );
     let runner = sim.init(dag);
@@ -184,6 +190,7 @@ fn test_3() {
         Rc::new(RefCell::new(HeftScheduler::new())),
         Config {
             data_transfer_mode: DataTransferMode::ViaMasterNode,
+            billing_interval: 1.0,
         },
     );
     let runner = sim.init(dag);
@@ -191,7 +198,7 @@ fn test_3() {
     assert!(runner.borrow().is_completed());
 
     let result = (sim.time() / PRECISION).round() * PRECISION;
-    assert_float_eq(result, 104.166267395019531, EPSILON);
+    assert_float_eq(result, 102.975120544433594, EPSILON);
 }
 
 #[test]
@@ -238,6 +245,7 @@ fn test_4() {
             Rc::new(RefCell::new(scheduler)),
             Config {
                 data_transfer_mode: DataTransferMode::Direct,
+                billing_interval: 1.0,
             },
         );
         sim.add_resource("0", 1., 1, 0);
@@ -301,6 +309,7 @@ fn test_chain_1() {
         Rc::new(RefCell::new(SimpleScheduler::new())),
         Config {
             data_transfer_mode: DataTransferMode::Direct,
+            billing_interval: 1.0,
         },
     );
     sim.add_resource("0", 5., 10, 1024);
@@ -334,7 +343,12 @@ fn test_chain_2() {
         correct_result += task.flops as f64 / 5. / 2.;
     }
     for data_item in dag.get_data_items() {
-        correct_result += (data_item.size as f64 / bandwidth + latency) * 2.;
+        let coeff = if data_item.name == "input" || data_item.name == "output" {
+            1.
+        } else {
+            2.
+        };
+        correct_result += (data_item.size as f64 / bandwidth + latency) * coeff;
     }
 
     let mut sim = DagSimulation::new(
@@ -344,6 +358,7 @@ fn test_chain_2() {
         Rc::new(RefCell::new(SimpleScheduler::new())),
         Config {
             data_transfer_mode: DataTransferMode::ViaMasterNode,
+            billing_interval: 1.0,
         },
     );
     sim.add_resource("0", 5., 10, 1024);
@@ -382,6 +397,7 @@ fn test_fork_join() {
         Rc::new(RefCell::new(SimpleScheduler::new())),
         Config {
             data_transfer_mode: DataTransferMode::Direct,
+            billing_interval: 1.0,
         },
     );
     for i in 0..5 {
@@ -393,4 +409,178 @@ fn test_fork_join() {
 
     let result = sim.time();
     assert_float_eq(result, correct_result, EPSILON);
+}
+
+#[test]
+fn test_shared_bandwidth() {
+    let mut dag = DAG::new();
+    dag.add_task("0", 1., 1, 1, 1, CoresDependency::Linear);
+    dag.add_task("1", 1., 1, 1, 1, CoresDependency::Linear);
+    dag.add_task("2", 1., 1, 1, 1, CoresDependency::Linear);
+    let id = dag.add_task_output(0, "0", 1.);
+    dag.add_data_dependency(id, 1);
+    dag.add_data_dependency(id, 2);
+    dag.add_resource_restriction(0, ResourceRestriction::Only(BTreeSet::from([0])));
+    dag.add_resource_restriction(1, ResourceRestriction::Only(BTreeSet::from([1])));
+    dag.add_resource_restriction(2, ResourceRestriction::Only(BTreeSet::from([2])));
+
+    let mut sim = DagSimulation::new(
+        123,
+        Vec::new(),
+        NetworkConfig::shared(1., 0.),
+        Rc::new(RefCell::new(SimpleScheduler::new())),
+        Config {
+            data_transfer_mode: DataTransferMode::Direct,
+            billing_interval: 1.0,
+        },
+    );
+    sim.add_resource("0", 1., 1, 1);
+    sim.add_resource("1", 1., 1, 1);
+    sim.add_resource("2", 1., 1, 1);
+    let runner = sim.init(dag);
+    sim.step_until_no_events();
+    assert!(runner.borrow().is_completed());
+
+    assert_float_eq(runner.borrow().run_stats().makespan, 4., EPSILON);
+}
+
+#[test]
+fn test_star_topology() {
+    let modes = [DataTransferMode::Direct, DataTransferMode::ViaMasterNode];
+    let values = [4., 5.];
+    for (mode, expected) in modes.into_iter().zip(values.into_iter()) {
+        let mut dag = DAG::new();
+        dag.add_task("0", 1., 1, 1, 1, CoresDependency::Linear);
+        dag.add_task("1", 1., 1, 1, 1, CoresDependency::Linear);
+        dag.add_task("2", 1., 1, 1, 1, CoresDependency::Linear);
+        dag.add_task("3", 1., 1, 1, 1, CoresDependency::Linear);
+        let out0 = dag.add_task_output(0, "0", 1.);
+        let out1 = dag.add_task_output(1, "1", 1.);
+        dag.add_data_dependency(out0, 2);
+        dag.add_data_dependency(out0, 3);
+        dag.add_data_dependency(out1, 3);
+        dag.add_resource_restriction(0, ResourceRestriction::Only(BTreeSet::from([0])));
+        dag.add_resource_restriction(1, ResourceRestriction::Only(BTreeSet::from([1])));
+        dag.add_resource_restriction(2, ResourceRestriction::Only(BTreeSet::from([2])));
+        dag.add_resource_restriction(3, ResourceRestriction::Only(BTreeSet::from([3])));
+
+        let mut sim = DagSimulation::new(
+            123,
+            Vec::new(),
+            NetworkConfig::topology(TopologyType::Star, 1., 0.),
+            Rc::new(RefCell::new(HeftScheduler::new())),
+            Config {
+                data_transfer_mode: mode,
+                billing_interval: 1.0,
+            },
+        );
+        sim.add_resource("0", 1., 1, 1);
+        sim.add_resource("1", 1., 1, 1);
+        sim.add_resource("2", 1., 1, 1);
+        sim.add_resource("3", 1., 1, 1);
+        let runner = sim.init(dag);
+        sim.step_until_no_events();
+        assert!(runner.borrow().is_completed());
+
+        assert_float_eq(runner.borrow().run_stats().makespan, expected, EPSILON);
+    }
+}
+
+#[test]
+fn test_resource_cost() {
+    let mut dag = DAG::new();
+    dag.add_task("0", 0.9, 1, 1, 1, CoresDependency::Linear);
+    dag.add_task("1", 0.9, 1, 1, 1, CoresDependency::Linear);
+    let input = dag.add_data_item("input", 0.);
+    let out0 = dag.add_task_output(0, "0", 0.3);
+    dag.add_data_dependency(input, 0);
+    dag.add_data_dependency(out0, 1);
+    dag.add_task_output(1, "output", 0.);
+
+    dag.add_resource_restriction(0, ResourceRestriction::Only(BTreeSet::from([0])));
+    dag.add_resource_restriction(1, ResourceRestriction::Only(BTreeSet::from([1])));
+
+    let mut sim = DagSimulation::new(
+        123,
+        Vec::new(),
+        NetworkConfig::constant(1., 0.),
+        Rc::new(RefCell::new(SimpleScheduler::new())),
+        Config {
+            data_transfer_mode: DataTransferMode::Direct,
+            billing_interval: 1.0,
+        },
+    );
+    sim.add_resource_with_price("0", 1., 1, 1, 1.);
+    sim.add_resource_with_price("1", 1., 1, 1, 1.);
+    let runner = sim.init(dag);
+    sim.step_until_no_events();
+    assert!(runner.borrow().is_completed());
+
+    assert_float_eq(runner.borrow().run_stats().total_execution_cost, 4., EPSILON);
+}
+
+// This tests prevents some possible bugs with multiple transfers of the same item.
+#[test]
+fn test_same_item_multiple_transfers() {
+    let mut dag = DAG::new();
+    dag.add_task("0", 1., 1, 1, 1, CoresDependency::Linear);
+    dag.add_task("1", 3., 1, 1, 1, CoresDependency::Linear);
+    dag.add_task("2", 1., 1, 1, 1, CoresDependency::Linear);
+    dag.add_task("3", 1., 1, 1, 1, CoresDependency::Linear);
+    let out0 = dag.add_task_output(0, "0", 3.);
+    let out1 = dag.add_task_output(1, "1", 3.);
+    dag.add_data_dependency(out0, 2);
+    dag.add_data_dependency(out0, 3);
+    dag.add_data_dependency(out1, 3);
+    dag.add_resource_restriction(0, ResourceRestriction::Only(BTreeSet::from([0])));
+    dag.add_resource_restriction(1, ResourceRestriction::Only(BTreeSet::from([2])));
+    dag.add_resource_restriction(2, ResourceRestriction::Only(BTreeSet::from([1])));
+    dag.add_resource_restriction(3, ResourceRestriction::Only(BTreeSet::from([2])));
+
+    let links = vec![
+        CustomLink {
+            from: "master".to_string(),
+            to: "0".to_string(),
+            bandwidth: 1.,
+            latency: 0.,
+            unidirectional: false,
+            shared: false,
+        },
+        CustomLink {
+            from: "0".to_string(),
+            to: "1".to_string(),
+            bandwidth: 3.,
+            latency: 0.,
+            unidirectional: false,
+            shared: false,
+        },
+        CustomLink {
+            from: "0".to_string(),
+            to: "2".to_string(),
+            bandwidth: 1.,
+            latency: 0.,
+            unidirectional: false,
+            shared: false,
+        },
+    ];
+
+    let mut sim = DagSimulation::new(
+        123,
+        Vec::new(),
+        NetworkConfig::custom(links),
+        Rc::new(RefCell::new(HeftScheduler::new())),
+        Config {
+            data_transfer_mode: DataTransferMode::Direct,
+            billing_interval: 1.0,
+        },
+    );
+    sim.add_resource_with_price("0", 1., 1, 1, 1.);
+    sim.add_resource_with_price("1", 1., 1, 1, 1.);
+    sim.add_resource_with_price("2", 1., 1, 1, 1.);
+    let runner = sim.init(dag);
+    sim.step_until_no_events();
+    assert!(runner.borrow().is_completed());
+
+    assert_float_eq(runner.borrow().run_stats().total_execution_cost, 11., EPSILON);
+    assert_float_eq(runner.borrow().run_stats().total_network_traffic, 6., EPSILON);
 }

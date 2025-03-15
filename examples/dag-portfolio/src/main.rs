@@ -159,6 +159,7 @@ fn run_experiments(args: &Args) {
                     speed,
                     cores,
                     memory,
+                    price: 0.,
                 });
             }
         }
@@ -188,6 +189,7 @@ fn run_experiments(args: &Args) {
         algos,
         default_scheduler_resolver,
         traces_dir,
+        None,
     );
 
     let mut results = experiment.run(args.threads);

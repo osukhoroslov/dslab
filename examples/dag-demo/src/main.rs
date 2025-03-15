@@ -116,7 +116,10 @@ fn main() {
             resource_configs.clone(),
             network_config.clone(),
             scheduler,
-            Config { data_transfer_mode },
+            Config {
+                data_transfer_mode,
+                billing_interval: 1.,
+            },
         );
         let runner = sim.init(dag.clone());
         let trace_path = args.save_traces.then(|| {

@@ -45,6 +45,7 @@ fn main() {
         rc!(refcell!(SimpleScheduler::new())),
         Config {
             data_transfer_mode: DataTransferMode::ViaMasterNode,
+            billing_interval: 1.,
         },
     );
 

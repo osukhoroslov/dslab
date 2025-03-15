@@ -29,7 +29,7 @@ let network = read_network_config("../../examples/dag-demo/systems/cluster-het-4
 // use simple scheduler implementation
 let scheduler = Rc::new(RefCell::new(SimpleScheduler::new()));
 // create simulation with random seed 123
-let mut sim = DagSimulation::new(123, resources, network, scheduler, Config { data_transfer_mode: DataTransferMode::Direct });
+let mut sim = DagSimulation::new(123, resources, network, scheduler, Config { data_transfer_mode: DataTransferMode::Direct, billing_interval: 1.0 });
 // read DAG from YAML file
 let dag = DAG::from_yaml("../../examples/dag-demo/dags/diamond.yaml", &ParserConfig::default());
 

@@ -21,6 +21,18 @@ pub enum TopologyType {
     FullMesh,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CustomLink {
+    pub from: String,
+    pub to: String,
+    /// Network bandwidth in MB/s.
+    pub bandwidth: f64,
+    /// Network latency in μs.
+    pub latency: f64,
+    pub unidirectional: bool,
+    pub shared: bool,
+}
+
 /// Represents network model parameters.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "model")]
@@ -37,13 +49,16 @@ pub enum NetworkConfig {
         /// Network latency in μs.
         latency: f64,
     },
-    TopologyAware {
+    BasicTopology {
         #[serde(rename = "topology")]
         topology_type: TopologyType,
         /// Links bandwidth in MB/s.
         link_bandwidth: f64,
         /// Links latency in μs.
         link_latency: f64,
+    },
+    CustomTopology {
+        links: Vec<CustomLink>,
     },
 }
 
@@ -66,11 +81,16 @@ impl NetworkConfig {
     ///
     /// Bandwidth should be in MB/s, latency in μs.
     pub fn topology(topology_type: TopologyType, link_bandwidth: f64, link_latency: f64) -> Self {
-        NetworkConfig::TopologyAware {
+        NetworkConfig::BasicTopology {
             topology_type,
             link_bandwidth,
             link_latency,
         }
+    }
+
+    /// Creates a more flexible network config with [`TopologyAwareNetworkModel`].
+    pub fn custom(links: Vec<CustomLink>) -> Self {
+        NetworkConfig::CustomTopology { links }
     }
 
     /// Creates network model based on stored parameters.
@@ -94,31 +114,29 @@ impl NetworkConfig {
                     ctx,
                 )
             }
-            NetworkConfig::TopologyAware { .. } => Network::new(Box::new(TopologyAwareNetworkModel::new()), ctx),
+            NetworkConfig::BasicTopology { .. } => Network::new(Box::new(TopologyAwareNetworkModel::new()), ctx),
+            NetworkConfig::CustomTopology { .. } => Network::new(Box::new(TopologyAwareNetworkModel::new()), ctx),
         }
     }
 
-    /// Adds network nodes and links (in case of topology-aware network model).
+    /// Adds network nodes and links (in case of topology-aware or custom network model).
     pub fn init_network(&self, network: Rc<RefCell<Network>>, runner_id: Id, resources: &[Resource]) {
         let mut network = network.borrow_mut();
 
         // Add nodes
-        for (host_name, id) in resources
-            .iter()
-            .map(|r| (r.name.as_str(), r.id))
-            .chain([("master", runner_id)])
-        {
+        for (host_name, id) in resources.iter().map(|r| (r.name.as_str(), r.id)) {
             network.add_node(
                 host_name,
-                // since local transfers are not used,
-                // we don't care about the local model parameters
-                Box::new(ConstantBandwidthNetworkModel::new(100000., 0.)),
+                // local transfers must be instant
+                // they sometimes happen when transfering data via master
+                Box::new(ConstantBandwidthNetworkModel::new(f64::INFINITY, 0.)),
             );
             network.set_location(id, host_name);
         }
+        network.set_location(runner_id, "master");
 
         // Add links
-        if let NetworkConfig::TopologyAware {
+        if let NetworkConfig::BasicTopology {
             topology_type,
             link_bandwidth,
             link_latency,
@@ -128,7 +146,7 @@ impl NetworkConfig {
 
             match topology_type {
                 TopologyType::Star => {
-                    for resource in resources.iter() {
+                    for resource in resources.iter().filter(|r| r.name != "master") {
                         network.add_full_duplex_link(
                             "master",
                             &resource.name,
@@ -137,8 +155,8 @@ impl NetworkConfig {
                     }
                 }
                 TopologyType::FullMesh => {
-                    for host1 in resources.iter().map(|r| r.name.as_str()).chain(["master"]) {
-                        for host2 in resources.iter().map(|r| r.name.as_str()).chain(["master"]) {
+                    for host1 in resources.iter().map(|r| r.name.as_str()) {
+                        for host2 in resources.iter().map(|r| r.name.as_str()) {
                             if host1 < host2 {
                                 network.add_full_duplex_link(host1, host2, Link::shared(*link_bandwidth, link_latency));
                             }
@@ -147,6 +165,32 @@ impl NetworkConfig {
                 }
             }
 
+            network.init_topology();
+        }
+
+        if let NetworkConfig::CustomTopology { links } = self {
+            for link in links.iter() {
+                let link_latency = link.latency * 1e-6; // convert to seconds
+                if link.unidirectional {
+                    if link.shared {
+                        network.add_unidirectional_link(
+                            &link.from,
+                            &link.to,
+                            Link::shared(link.bandwidth, link_latency),
+                        );
+                    } else {
+                        network.add_unidirectional_link(
+                            &link.from,
+                            &link.to,
+                            Link::non_shared(link.bandwidth, link_latency),
+                        );
+                    }
+                } else if link.shared {
+                    network.add_full_duplex_link(&link.from, &link.to, Link::shared(link.bandwidth, link_latency));
+                } else {
+                    network.add_full_duplex_link(&link.from, &link.to, Link::non_shared(link.bandwidth, link_latency));
+                }
+            }
             network.init_topology();
         }
     }

@@ -314,7 +314,7 @@ impl PanelsWidget {
                 );
             }
 
-            downy += 5. + ((compute.cores.max(1) + CORES_PER_ROW - 1) / CORES_PER_ROW) as f64 * 20.;
+            downy += 5. + (compute.cores.max(1).div_ceil(CORES_PER_ROW)) as f64 * 20.;
 
             // line below cores
             ctx.stroke(
@@ -429,7 +429,7 @@ impl Widget<AppData> for PanelsWidget {
     fn layout(&mut self, _: &mut LayoutCtx, bc: &BoxConstraints, data: &AppData, _: &Env) -> druid::Size {
         let actor_height = self.get_actor_height(data);
         let actors_per_row = self.get_actors_per_row(bc.max().width);
-        let rows = (data.compute.borrow().len() + actors_per_row - 1) / actors_per_row + 1;
+        let rows = data.compute.borrow().len().div_ceil(actors_per_row) + 1;
         Size::new(
             bc.max().width,
             rows as f64 * actor_height + (rows + 1) as f64 * BLOCK_Y_PADDING,

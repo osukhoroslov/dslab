@@ -1,0 +1,13 @@
+[package]
+name = "dag-pareto"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+edition = "2021"
+
+[dependencies]
+dslab-dag = { path = "../../crates/dslab-dag" }
+dslab-compute = { path = "../../crates/dslab-compute" }
+clap = { version = "4.1.9", features = ["derive"] }
+env_logger = "0.9.0"
+log = "0.4"
+sugars = "3.0.0"

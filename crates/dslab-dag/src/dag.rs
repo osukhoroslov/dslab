@@ -189,8 +189,8 @@ impl DAG {
         DagStats::new(self)
     }
 
-    pub fn set_resource_restriction(&mut self, task_id: usize, restriction: ResourceRestriction) {
-        self.tasks[task_id].resource_restriction = Some(restriction);
+    pub fn add_resource_restriction(&mut self, task_id: usize, restriction: ResourceRestriction) {
+        self.tasks[task_id].add_resource_restriction(restriction);
     }
 
     /// Sets data item as output of the specified task.

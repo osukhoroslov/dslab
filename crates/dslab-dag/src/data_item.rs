@@ -25,7 +25,7 @@ pub struct DataItem {
     /// The size of data item in MB.
     pub size: f64,
     pub producer: Option<usize>,
-    pub(crate) consumers: Vec<usize>,
+    pub consumers: Vec<usize>,
     pub(crate) state: DataItemState,
 }
 
@@ -80,6 +80,7 @@ impl DataTransferMode {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum DataTransferStrategy {
     Eager, // default assumption in HEFT -- data transfer starts as soon as task finished
     Lazy,  // data transfer starts only when the destination node is ready to execute the task

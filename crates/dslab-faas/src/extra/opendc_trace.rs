@@ -123,7 +123,7 @@ impl<'a> OpenDCRequestIter<'a> {
     }
 }
 
-impl<'a> Iterator for OpenDCRequestIter<'a> {
+impl Iterator for OpenDCRequestIter<'_> {
     type Item = RequestData;
 
     fn next(&mut self) -> Option<Self::Item> {

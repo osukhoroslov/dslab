@@ -32,6 +32,7 @@ use crate::trace_log::{Event as TraceEvent, Resource as TraceResource, TraceLog}
 #[derive(Clone)]
 pub struct Config {
     pub data_transfer_mode: DataTransferMode,
+    pub billing_interval: f64,
 }
 
 /// Represents a transfer of data item between resources.
@@ -105,6 +106,11 @@ impl DAGRunner {
             .enumerate()
             .map(|(idx, resource)| (resource.id, idx))
             .collect();
+        let resource_price = resources
+            .iter()
+            .enumerate()
+            .map(|(idx, resource)| (idx, resource.price))
+            .collect();
         let available_cores = resources
             .iter()
             .map(|resource| (0..resource.compute.borrow().cores_total()).collect())
@@ -132,7 +138,7 @@ impl DAGRunner {
             resource_data_items: HashMap::new(),
             available_cores,
             trace_log_enabled: true,
-            run_stats: RunStats::new(),
+            run_stats: RunStats::new(config.billing_interval, resource_price),
             config,
             ctx,
         }
@@ -141,6 +147,26 @@ impl DAGRunner {
     /// Enables or disables [trace log](TraceLog).
     pub fn enable_trace_log(&mut self, flag: bool) {
         self.trace_log_enabled = flag;
+    }
+
+    /// Returns DAG for this runner.
+    pub fn dag(&self) -> &DAG {
+        &self.dag
+    }
+
+    /// Returns resources for this runner.
+    pub fn resources(&self) -> &Vec<Resource> {
+        &self.resources
+    }
+
+    /// Returns network for this runner.
+    pub fn network(&self) -> Rc<RefCell<Network>> {
+        self.network.clone()
+    }
+
+    /// Returns simulation context for this runner.
+    pub fn context(&self) -> &SimulationContext {
+        &self.ctx
     }
 
     /// Starts DAG execution.
@@ -281,10 +307,10 @@ impl DAGRunner {
         if !task.is_allowed_on(resource) {
             log_error!(
                 self.ctx,
-                "Wrong action, task {} isn't allowed to run on resource {} because of restriction: {:?}",
+                "Wrong action, task {} isn't allowed to run on resource {} because of restrictions: {:?}",
                 task_id,
                 resource,
-                task.resource_restriction,
+                task.resource_restrictions,
             );
             return;
         }
@@ -495,8 +521,12 @@ impl DAGRunner {
                 to,
             },
         );
-        self.run_stats
-            .set_transfer_start(data_id, data_item.size, self.ctx.time());
+        self.run_stats.set_transfer_start(
+            data_id,
+            data_item.size,
+            self.resource_indexes.get(&to).copied(),
+            self.ctx.time(),
+        );
         if self.trace_log_enabled {
             self.trace_log.log_event(
                 &self.ctx,
@@ -656,7 +686,11 @@ impl DAGRunner {
         let data_id = data_transfer.data_id;
         let data_item = self.dag.get_data_item(data_id);
 
-        self.run_stats.set_transfer_finish(data_event_id, self.ctx.time());
+        self.run_stats.set_transfer_finish(
+            data_event_id,
+            self.resource_indexes.get(&data_transfer.from).copied(),
+            self.ctx.time(),
+        );
         if self.trace_log_enabled {
             self.trace_log.log_event(
                 &self.ctx,

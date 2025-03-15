@@ -83,7 +83,7 @@ fn main() {
     sim.add_handler("net", network.clone());
     for i in 0..host_count {
         network.borrow_mut().add_node(
-            &format!("host{}", i),
+            format!("host{}", i),
             Box::new(SharedBandwidthNetworkModel::new(local_bandwidth as f64, local_latency)),
         );
     }

@@ -61,7 +61,7 @@ pub struct Task {
     pub inputs: Vec<usize>,
     pub outputs: Vec<usize>,
     pub(crate) ready_inputs: usize,
-    pub resource_restriction: Option<ResourceRestriction>,
+    pub resource_restrictions: Vec<ResourceRestriction>,
 }
 
 impl Task {
@@ -85,7 +85,7 @@ impl Task {
             inputs: Vec::new(),
             outputs: Vec::new(),
             ready_inputs: 0,
-            resource_restriction: None,
+            resource_restrictions: Vec::new(),
         }
     }
 
@@ -99,10 +99,14 @@ impl Task {
         self.outputs.push(data_item_id);
     }
 
+    /// Adds resource restriction.
+    pub fn add_resource_restriction(&mut self, restriction: ResourceRestriction) {
+        self.resource_restrictions.push(restriction);
+    }
+
     pub fn is_allowed_on(&self, resource_id: usize) -> bool {
-        self.resource_restriction
-            .as_ref()
-            .map(|rr| rr.is_allowed_on(resource_id))
-            .unwrap_or(true)
+        self.resource_restrictions
+            .iter()
+            .all(|rr| rr.is_allowed_on(resource_id))
     }
 }
